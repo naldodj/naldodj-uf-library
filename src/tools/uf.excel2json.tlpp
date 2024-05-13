@@ -277,9 +277,9 @@ static method PSExcel2JSON(cFileInput,cFileOutPut,cPSPathExcelScripts) class Exc
     local nShellExecute:=(-1) as numeric
 
     //Verifica nWaits*1000 a aguardar
-    local nWait,nWaits:=getNewPar("EXL2JON_MW",6) as numeric
+    local nWait,nWaits:=getNewPar("EXL2JON_MW",15) as numeric
     //Verifica nAttempts para experar a obtencao do arquivo
-    local nAttempt:=0,nAttempts:=getNewPar("EXL2JON_MA",15) as numeric
+    local nAttempt:=0,nAttempts:=getNewPar("EXL2JON_MA",51) as numeric
 
     paramtype 1 var cFileInput as character
     paramtype 2 var cFileOutPut as character
