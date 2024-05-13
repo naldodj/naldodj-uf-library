@@ -1,0 +1,25 @@
+/*----------------------------------------------------------------------
+         __     _              _  _
+ _   _  / _|   (_) ___  _ __  (_)| |
+| | | || |_    | |/ __|| '_ \ | || |
+| |_| ||  _| _ | |\__ \| | | || || |
+ \__,_||_|  (_)|_||___/|_| |_||_||_|
+
+*/
+
+#include "totvs.ch"
+
+namespace uf
+using namespace uf
+
+class isnil
+    static method Isnil(xValue as variant,xDefault as variant) as logical
+end class
+
+static method Isnil(xValue,xDefault) class isnil
+    return(Isnil(@xValue,@xDefault))
+static function Isnil(xValue as variant,xDefault as variant) as logical
+    local lIsnil as logical
+    lIsnil:=(xValue==nil)
+    xValue:=if(lIsnil,xDefault,xValue)
+    return(lIsnil)

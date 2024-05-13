@@ -1,0 +1,636 @@
+/*----------------------------------------------------------------------
+         __     _
+ _   _  / _|   | |  ___    __ _
+| | | || |_    | | / _ \  / _` |
+| |_| ||  _| _ | || (_) || (_| |
+ \__,_||_|  (_)|_| \___/  \__, |
+                          |___/
+*/
+
+#include "fileio.ch"
+#include "totvs.ch"
+#include "parmtype.ch"
+#include "tlpp-core.th"
+
+#define __FATLINE__  "__FATLINE__"
+#define __THINLINE__ "__THINLINE__"
+
+#define __LOG_SEPARETOR_MARK__ ("!"+CHR(0)+"!")
+
+namespace uf
+using namespace uf
+
+class Log
+
+    data jLog as json
+
+    data nMLCountSize as numeric
+
+    public method New(nMLCountSize as numeric) as object /*/\constructor/\*/
+
+    public method Clean() as object
+
+    public method AddGroup(cGroup as character) as object
+    public method AddDetail(cGroup as character,cDetail as character,nMLCountSize as numeric) as object
+    public method GetDetail(cGroup as character) as array
+
+    public method FindDetail(cGroup as character,cDetail as character,nMLCountSize as numeric) as numeric
+    public method ExistGroup(cGroup as character) as logical
+
+    public method LogAsFile(cLogFile as character,nError as numeric,lLogAsConOutIfError as logical) as logical
+    public method LogAsConOut() as variant
+
+    public method LogGetURLBase() as character
+    public method LogAsHtmlFile(cLogFile as character,cTitle as character,nError as numeric,lLogAsConOutIfError as logical) as logical
+
+    public method FatLine() as character
+    public method ThinLine() as character
+
+    public method FormattedLog(cDetail as character,cType as character,lGetHeader as logical) as character
+    public method FormatLogEntry(cGroup as character,cDetail as character,nMLCountSize as numeric,cType as character) as object
+    public method FormatLogEntryTbl(cGroup as character,cDetail as character,cType as character) as object
+    public method FormatJSONDetailTbl(jDetail as json) as character
+
+    public method FormatLogFile(cLogPath as character,cLogName as character) as character
+
+endclass
+
+method New(nMLCountSize) class Log
+    paramtype nMLCountSize as numeric optional default 254
+    self:jLog:=JSONObject():New()
+    self:nMLCountSize:=nMLCountSize
+return(self)
+
+method Clean() class Log
+
+    local aDetail as array
+    local aProperties as array
+
+    local cProperty as character
+
+    local nProperty as numeric
+    local nProperties as numeric
+
+    aProperties:=self:jLog:GetNames()
+    nProperties:=Len(aProperties)
+    for nProperty:=1 to nProperties
+        cProperty:=aProperties[nProperty]
+        if (!self:jLog:HasProperty(cProperty))
+            loop
+        endif
+        aDetail:=self:GetDetail(cProperty)
+        FWFreeArray(@aDetail)
+        self:jLog:DelName(cProperty)
+    next nProperty
+
+    FWFreeArray(@aDetail)
+    FWFreeArray(@aProperties)
+
+return(self)
+
+method AddGroup(cGroup) class Log
+    paramtype cGroup as character optional default "__noname__"
+    if (!self:jLog:HasProperty(cGroup))
+        self:jLog[cGroup]:=Array(0)
+    endif
+return(self)
+
+method AddDetail(cGroup,cDetail,nMLCountSize) class Log
+    local aDetail as array
+    local nMLLine as numeric
+    local nMLCount as numeric
+    paramtype cGroup as character optional default "__noname__"
+    paramtype cDetail as character optional default ""
+    paramtype nMLCountSize as numeric optional default self:nMLCountSize
+    aDetail:=self:GetDetail(cGroup)
+    if (nMLCountSize<0)
+        aAdd(@aDetail,cDetail)
+    else
+        nMLCount:=MLCount(cDetail,nMLCountSize)
+        for nMLLine:=1 to nMLCount
+            if (empty(StrTran(StrTran(cDetail,__FATLINE__,""),__THINLINE__,"")))
+                aAdd(@aDetail,cDetail)
+            else
+                aAdd(@aDetail,memoLine(cDetail,nMLCountSize,nMLLine))
+            endif
+        next nMLLine
+    endif
+return(self)
+
+method FormatLogEntry(cGroup,cDetail,nMLCountSize,cType) class Log
+    paramtype cGroup as character optional default "__noname__"
+    paramtype cDetail as character optional default ""
+    paramtype nMLCountSize as numeric optional default self:nMLCountSize
+    paramtype cType as character optional default "INFO"
+    cDetailFormated:=self:FormattedLog(cDetail,cType,.F.)
+return(self:AddDetail(cGroup,cDetailFormated,nMLCountSize))
+
+method FormatLogEntryTbl(cGroup,cDetail,cType) class Log
+    local nMLCountSize:=(-1) as numeric
+    paramtype cGroup as character optional default "__noname__"
+    paramtype cDetail as character optional default ""
+    paramtype cType as character optional default "INFO"
+return(self:FormatLogEntry(cGroup,cDetail,nMLCountSize,cType))
+
+method FormatJSONDetailTbl(jDetail) class Log
+
+    local aProperties as array
+
+    local cHTML as character
+    local cProperty as character
+
+    local nProperty,nProperties as numeric
+
+    paramtype 1 var jDetail as json
+
+    cHTML:="<div class='table-responsive mt-4'>"
+    cHTML+="  <table class='table table-bordered table-sm table-striped'>"
+    cHTML+="      <thead class='thead-print'>"
+    cHTML+="          <tr>"
+
+    aProperties:=aClone(jDetail:GetNames())
+    nProperties:=Len(aProperties)
+    for nProperty:=1 to nProperties
+        cProperty:=aProperties[nProperty]
+        cHTML+="              <th scope='col'>"+cProperty+"</th>"
+    next nProperty
+
+    cHTML+="          </tr>"
+    cHTML+="      </thead>"
+
+    cHTML+="      <tbody>"
+    cHTML+="          <tr>"
+
+    for nProperty:=1 to nProperties
+        cProperty:=aProperties[nProperty]
+        cHTML+="              <td>"+jDetail[cProperty]+"</td>"
+    next nProperty
+
+    cHTML+="          </tr>"
+    cHTML+="      </tbody>"
+    cHTML+="  </table>"
+    cHTML+="</div>"
+
+    FWFreeArray(@aProperties)
+
+return(cHTML)
+
+method GetDetail(cGroup) class Log
+    local aDetail as array
+    local cType as character
+    paramtype cGroup as character optional default "__noname__"
+    if (!self:jLog:HasProperty(cGroup))
+        self:AddGroup(cGroup)
+    endif
+    if (self:jLog:HasProperty(cGroup))
+        if (!self:jLog:GetJSONValue(cGroup,@aDetail,@cType))
+            aDetail:=array(0)
+        endif
+    else
+        aDetail:=array(0)
+    endif
+return(aDetail)
+
+method FindDetail(cGroup,cDetail,nMLCountSize) class Log
+    local aDetail as array
+    local cLine as character
+    local nAT as numeric
+    local nATFirst:=0 as numeric
+    local nMLLine as numeric
+    local nMLCount as numeric
+    paramtype cGroup as character optional default "__noname__"
+    paramtype cDetail as character optional default ""
+    paramtype nMLCountSize as numeric optional default self:nMLCountSize
+    aDetail:=self:GetDetail(cGroup)
+    if (nMLCountSize<0)
+        nAT:=aScan(aDetail,{|cLine|(cDetail==cLine)})
+    else
+        nMLCount:=MLCount(cDetail,nMLCountSize)
+        for nMLLine:=1 to nMLCount
+            cLine:=memoLine(cDetail,nMLCountSize,nMLLine)
+            nAT:=aScan(aDetail,{|cDetail|(cDetail==cLine)})
+            if (nAT==0)
+                nATFirst:=0
+                exit
+            endif
+            if (nATFirst==0)
+                nATFirst:=nAT
+            endif
+        next nMLLine
+        nAT:=nATFirst
+    endif
+return(nAT)
+
+method FormattedLog(cDetail,cType,lGetHeader) class Log
+    local cDetailFormated as character
+    local nStack:=IF(FWIsInCallStack("FORMATLOGENTRYTBL"),3,IF(FWIsInCallStack("FORMATLOGENTRY"),2,1)) as numeric
+    paramtype cDetail as character
+    paramtype cType as character optional default "INFO"
+    paramtype lGetHeader as logical optional default .F.
+    if (!lGetHeader)
+        cDetailFormated:=DToC(Date())
+        cDetailFormated+=__LOG_SEPARETOR_MARK__
+        cDetailFormated+=Time()
+        cDetailFormated+=__LOG_SEPARETOR_MARK__
+        cDetailFormated+=ProcName(nStack)
+        cDetailFormated+=__LOG_SEPARETOR_MARK__
+        cDetailFormated+=StrZero(ProcLine(nStack),4)
+        cDetailFormated+=__LOG_SEPARETOR_MARK__
+        cDetailFormated+=cType
+        cDetailFormated+=__LOG_SEPARETOR_MARK__
+        cDetailFormated+=cDetail
+    else
+        cDetailFormated:="Date"
+        cDetailFormated+=__LOG_SEPARETOR_MARK__
+        cDetailFormated+="Time"
+        cDetailFormated+=__LOG_SEPARETOR_MARK__
+        cDetailFormated+="ProcName"
+        cDetailFormated+=__LOG_SEPARETOR_MARK__
+        cDetailFormated+="ProcLine"
+        cDetailFormated+=__LOG_SEPARETOR_MARK__
+        cDetailFormated+="Type"
+        cDetailFormated+=__LOG_SEPARETOR_MARK__
+        cDetailFormated+="Detail"
+    endif
+return(cDetailFormated)
+
+method LogAsFile(cLogFile,nError,lLogAsConOutIfError) class Log
+
+    local aDetail as array
+
+    local aProperties as array
+
+    local cCRLF:=CRLF as character
+    local cBuffer as character
+    local cProperty as character
+
+    local lLogAsFile:=.F. as logical
+
+    local nDetail as numeric
+    local nDetails as numeric
+
+    local nProperty as numeric
+    local nProperties as numeric
+
+    local nfhLog as numeric
+
+    paramtype cLogFile as character
+    paramtype nError as numeric optional default 0
+    paramtype lLogAsConOutIfError as logical optional default .F.
+
+    begin sequence
+
+        lLogAsFile:=UF.DirTools():MakeFileDir(cLogFile)
+
+        if (!lLogAsFile)
+            nError:=fError()
+            if (lLogAsConOutIfError)
+                self:LogAsConOut()
+            endif
+            break
+        endif
+
+        nfhLog:=fCreate(cLogFile,FC_NORMAL)
+        lLogAsFile:=(nfhLog>=0)
+        if (!lLogAsFile)
+            nError:=fError()
+            if (lLogAsConOutIfError)
+                self:LogAsConOut()
+            endif
+            break
+        endif
+
+        aProperties:=self:jLog:GetNames()
+        nProperties:=Len(aProperties)
+        for nProperty:=1 to nProperties
+            cProperty:=aProperties[nProperty]
+            if (!self:jLog:HasProperty(cProperty))
+                loop
+            endif
+            cBuffer:=cProperty
+            cBuffer+=cCRLF
+            fWrite(nfhLog,cBuffer)
+            cBuffer:=""
+            aDetail:=aClone(self:GetDetail(cProperty))
+            nDetails:=Len(aDetail)
+            for nDetail:=1 to nDetails
+                cBuffer:=aDetail[nDetail]
+                if ((cBuffer==__FATLINE__).or.(cBuffer==__THINLINE__))
+                    if (cBuffer==__FATLINE__)
+                        cBuffer:=Replicate("=",self:nMLCountSize)
+                    else
+                        cBuffer:=Replicate("-",self:nMLCountSize)
+                    endif
+                else
+                    cBuffer:=strTran(cBuffer,__LOG_SEPARETOR_MARK__," | ")
+                endif
+                cBuffer+=cCRLF
+                fWrite(nfhLog,cBuffer)
+                cBuffer:=""
+            next nDetail
+            FWFreeArray(@aDetail)
+        next nProperty
+
+    end sequence
+
+    if (!empty(nfhLog))
+        fClose(nfhLog)
+    endif
+
+    FWFreeArray(@aDetail)
+    FWFreeArray(@aProperties)
+
+return(lLogAsFile)
+
+method LogGetURLBase() class Log
+    local cURLBase:="https://cdn.jsdelivr.net/npm/bootstrap/dist/css/bootstrap.min.css" as character
+return(cURLBase)
+
+method LogAsHtmlFile(cLogFile,cTitle,nError,lLogAsConOutIfError) class Log
+
+    local aDetail as array
+    local aDetails as array
+
+    local aDetailBody as array
+    local aDetailHeader as array
+
+    local aProperties as array
+
+    local cCRLF:=CRLF as character
+    local cBuffer as character
+    local cProperty as character
+
+    local cDetail as character
+    local cDetailHeader as character
+
+    local lLogAsHtmlFile:=.F. as logical
+
+    local nDetail as numeric
+    local nDetails as numeric
+
+    local nHeader as numeric
+    local nHeaders as numeric
+
+    local nProperty as numeric
+    local nProperties as numeric
+
+    local nfhLog as numeric
+
+    paramtype cLogFile as character
+    paramtype cTitle as character
+    paramtype nError as numeric optional default 0
+    paramtype lLogAsConOutIfError as logical optional default .F.
+
+    begin sequence
+
+        lLogAsHtmlFile:=UF.DirTools():MakeFileDir(cLogFile)
+
+        if (!lLogAsHtmlFile)
+            nError:=fError()
+            if (lLogAsConOutIfError)
+                self:LogAsConOut()
+            endif
+            break
+        endif
+
+        nfhLog:=fCreate(cLogFile,FC_NORMAL)
+        lLogAsHtmlFile:=(nfhLog>=0)
+        if (!lLogAsHtmlFile)
+            nError:=fError()
+            if (lLogAsConOutIfError)
+                self:LogAsConOut()
+            endif
+            break
+        endif
+
+        beginContent var cBuffer
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>cTitle</title>
+        <link rel="stylesheet" href="cURLBase">
+        <style>
+            /* Define um estilo para o cabeçalho da tabela na impressão */
+            @media print {
+                .thead-print {
+                    display: table-header-group;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container-fluid no-padding">
+            <h1 class="mt-5">cTitle</h1>
+        endContent
+
+        cBuffer:=strTran(cBuffer,"cTitle",EncodeUTF8(cTitle))
+        cBuffer:=strTran(cBuffer,"cURLBase",self:LogGetURLBase())
+
+        fWrite(nfhLog,cBuffer)
+        cBuffer:=""
+
+        cDetailHeader:=self:FormattedLog("","",.T.)
+        aDetailHeader:=strTokArr2(cDetailHeader,__LOG_SEPARETOR_MARK__)
+        nHeaders:=Len(aDetailHeader)
+
+        aProperties:=self:jLog:GetNames()
+        nProperties:=Len(aProperties)
+        for nProperty:=1 to nProperties
+            cProperty:=aProperties[nProperty]
+            if (!self:jLog:HasProperty(cProperty))
+                loop
+            endif
+            beginContent var cBuffer
+        <div class="table-responsive mt-4">
+            <table class="table table-bordered table-sm table-striped">
+                <thead class="thead-print">
+                    <tr>
+                        <th>cProperty</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <table class="table table-bordered">
+                                <thead class="thead-print">
+                                    <tr>
+            endContent
+            cBuffer:=strTran(cBuffer,"cProperty",cProperty)
+            fWrite(nfhLog,cBuffer)
+            cBuffer:=""
+            for nHeader:=1 to nHeaders
+                cBuffer+="                                      <th>"+aDetailHeader[nHeader]+"</th>"
+                cBuffer+=cCRLF
+            next nHeader
+            fWrite(nfhLog,cBuffer)
+            cBuffer:=""
+            beginContent var cBuffer
+                                    </tr>
+                                </thead>
+                                <tbody>
+            endContent
+            fWrite(nfhLog,cBuffer)
+            cBuffer:=""
+            aDetails:=aClone(self:GetDetail(cProperty))
+            nDetails:=Len(aDetails)
+            for nDetail:=1 to nDetails
+                cDetail:=aDetails[nDetail]
+                if ((cDetail==__FATLINE__).or.(cDetail==__THINLINE__))
+                    cDetail:=""
+                    loop
+                endif
+                cDetail:=EncodeUTF8(cDetail)
+                aDetail:=strTokArr2(cDetail,__LOG_SEPARETOR_MARK__)
+                cBuffer:="                                <tr>"
+                cBuffer+=cCRLF
+                if (Len(aDetail)!=nHeaders)
+                    cBuffer+="                                  <td colspan='"+LTrim(Str(nHeaders))+"'>"+strTran(cDetail,__LOG_SEPARETOR_MARK__," | ")+"</td>"
+                    cBuffer+=cCRLF
+                else
+                    cBuffer+="                                  <td>"+aDetail[1]+"</td>"
+                    cBuffer+=cCRLF
+                    cBuffer+="                                  <td>"+aDetail[2]+"</td>"
+                    cBuffer+=cCRLF
+                    cBuffer+="                                  <td>"+aDetail[3]+"</td>"
+                    cBuffer+=cCRLF
+                    cBuffer+="                                  <td>"+aDetail[4]+"</td>"
+                    cBuffer+=cCRLF
+                    cBuffer+="                                  <td>"+aDetail[5]+"</td>"
+                    cBuffer+=cCRLF
+                    cBuffer+="                                  <td>"+aDetail[6]+"</td>"
+                    cBuffer+=cCRLF
+                endif
+                FWFreeArray(@aDetail)
+                cBuffer+="                                </tr>"
+                cBuffer+=cCRLF
+                fWrite(nfhLog,cBuffer)
+                cBuffer:=""
+            next nDetail
+            FWFreeArray(@aDetail)
+            beginContent var cBuffer
+                            </table>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+            endContent
+            fWrite(nfhLog,cBuffer)
+        next nProperty
+
+        beginContent var cBuffer
+    </div>
+
+    <!-- Inclua os arquivos JavaScript do Bootstrap (opcional) -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap/dist/js/bootstrap.min.js" integrity="sha384-BBtl+eGJRgqQAUMxJ7pMwbEyER4l1g+O15P+16Ep7Q9Q+zqX6gSbd85u4mG4QzX+" crossorigin="anonymous"></script>
+
+    </body>
+</html>
+        endContent
+
+        fWrite(nfhLog,cBuffer)
+
+    end sequence
+
+    if (!empty(nfhLog))
+        fClose(nfhLog)
+    endif
+
+    FWFreeArray(@aDetail)
+    FWFreeArray(@aDetails)
+    FWFreeArray(@aProperties)
+    FWFreeArray(@aDetailBody)
+    FWFreeArray(@aDetailHeader)
+
+return(lLogAsHtmlFile)
+
+method LogAsConOut() class Log
+
+    local aDetail as array
+    local aMessage:=array(0) as array
+
+    local aProperties as array
+
+    local cBuffer as character
+    local cProperty as character
+
+    local nDetail as numeric
+    local nDetails as numeric
+
+    local nProperty as numeric
+    local nProperties as numeric
+
+    begin sequence
+
+        aProperties:=self:jLog:GetNames()
+        nProperties:=Len(aProperties)
+        for nProperty:=1 to nProperties
+            cProperty:=aProperties[nProperty]
+            if (!self:jLog:HasProperty(cProperty))
+                loop
+            endif
+            aDetail:=aClone(self:GetDetail(cProperty))
+            nDetails:=Len(aDetail)
+            for nDetail:=1 to nDetails
+                cBuffer:=aDetail[nDetail]
+                if ((cBuffer==__FATLINE__).or.(cBuffer==__THINLINE__))
+                    loop
+                endif
+                cBuffer:=strTran(cBuffer,__LOG_SEPARETOR_MARK__," | ")
+                FWLogMsg(;
+                    "INFO"/*<cSeverity>*/,;
+                    "0"/*[cTransactionId]*/,;
+                    cProperty/*<cGroup>*/,;
+                    "LOG"/*<cCategory>*/,;
+                    ProcName()/*<cStep >*/,;
+                    StrZero(nDetail,10)/*<cMsgId>*/,;
+                    cBuffer/*<cMessage>*/,;
+                    0/*<nMensure>*/,;
+                    0/*<nElapseTime>*/,;
+                    @aMessage/*<aMessage>*/;
+                )
+                cBuffer:=""
+            next nDetail
+            FWFreeArray(@aDetail)
+        next nProperty
+
+    end sequence
+
+    FWFreeArray(@aDetail)
+    FWFReeArray(@aMessage)
+    FWFreeArray(@aProperties)
+
+return(nil)
+
+method ExistGroup(cGroup) class Log
+    local lExistGroup as logical
+    paramtype cGroup as character optional default "__noname__"
+    lExistGroup:=self:jLog:HasProperty(cGroup)
+return(lExistGroup)
+
+method FatLine() class Log
+return(__FATLINE__)
+
+method ThinLine() class Log
+return(__THINLINE__)
+
+method FormatLogFile(cLogPath,cLogName) class Log
+    local cLogFile as character
+    paramtype cLogPath as character
+    paramtype cLogName as character optional default ProcName(1)
+    cLogFile:=cLogPath
+    cLogFile+=DToS(Date())
+    cLogFile+="."
+    cLogFile+=strTran(Time(),":","")
+    cLogFile+="."
+    cLogFile+=Lower(cLogName)
+    cLogFile+="."
+    cLogFile+=strZero(ThreadID(),Len(UF.UFTools():RetPictVal(ThreadID())))
+    cLogFile+="."
+    cLogFile+=StrZero(Randomize(1,9999),4)
+    cLogFile+=".log"
+return(cLogFile)

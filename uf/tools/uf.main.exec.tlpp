@@ -1,0 +1,227 @@
+/*----------------------------------------------------------------------
+         __                       _
+ _   _  / _|    _ __ ___    __ _ (_) _ __       ___ __  __  ___   ___
+| | | || |_    | '_ ` _ \  / _` || || '_ \     / _ \\ \/ / / _ \ / __|
+| |_| ||  _| _ | | | | | || (_| || || | | | _ |  __/ >  < |  __/| (__
+ \__,_||_|  (_)|_| |_| |_| \__,_||_||_| |_|(_) \___|/_/\_\ \___| \___|
+
+*/
+
+#include "totvs.ch"
+#include "parmtype.ch"
+
+namespace uf
+using namespace uf
+using namespace dna.tech
+
+class MainExec
+    static method Execute(bExecute as codeblock,cTitle as character,lRPCTools as logical) as logical
+endclass
+
+static method Execute(bWindowInit,cTitle,lRPCTools) class MainExec
+
+    local cEmp as character
+    local cFil as character
+
+    local lRPCSet as logical
+    local lRPCSetEnv as logical
+    local lConfigure as logical
+    local lCriaPublica as logical
+
+    paramtype bWindowInit as block
+    paramtype cTitle as character optional default ProcName(2)
+    paramtype lRPCTools as logical optional default .T.
+
+    begin sequence
+
+        lRPCSet:=(Select("SM0")==0)
+        lRPCTools:=(lRPCTools.and.FindClass("dna.tech.RPCTools"))
+
+        if (lRPCSet)
+            OpenSM0()
+            lRPCSet:=(Select("SM0")>0)
+            if (!lRPCSet)
+                ApMsgAlert("Não foi possível abrir a tabela SM0","Atenção!")
+                break
+            endif
+            cEmp:=SM0->M0_CODIGO
+            cFil:=SM0->M0_CODFIL
+            if (lRPCTools)
+                lRPCSetEnv:=dna.tech.RPCTools():RPCSetEnv(cEmp,cFil,GetEnvServer())
+            else
+                if (!type("cEmpAnt")=="C")
+                    lCriaPublica:=.T.
+                endif
+                if (!type("cFilAnt")=="C")
+                    lCriaPublica:=.T.
+                endif
+                if (lCriaPublica)
+                    SetsDefault()
+                    //criamos oApp aqui
+                    if (type("oApp")!="O")
+                        MsApp():New("SIGAESP")
+                        if (type("oApp")=="O")
+                            //Criamos cEmpAnt e cFilAnt aqui
+                            &("oApp"):CreateEnv()
+                            CriaPublica()
+                        endif
+                    else
+                        //Criamos cEmpAnt e cFilAnt aqui
+                        &("oApp"):CreateEnv()
+                        CriaPublica()
+                    endif
+                endif
+                lRPCSetEnv:=RPCSetEnv(cEmp,cFil,GetEnvServer())
+                SetsDefault()
+                if (type("__cInternet")=="C")
+                    &("__cInternet"):=nil
+                endif
+                __SetCentury("ON")
+            endif
+        endif
+
+        if ((lRPCSet).and.(!lRPCSetEnv))
+            ApMsgAlert("Não foi possível Preparar o Ambiente","Atenção!")
+        endif
+
+        if (Type("oMainWnd")!="O")
+            private oMainWnd as object
+            lConfigure:=Execute(bWindowInit,cTitle)
+            FreeObj(@oMainWnd)
+        else
+            lConfigure:=Eval(bWindowInit)
+        endif
+
+        if ((lRPCSet).and.(lRPCSetEnv))
+            if (lRPCTools)
+                dna.tech.RPCTools():RPCClearEnv()
+            else
+                RPCClearEnv()
+            endif
+        endif
+
+    end sequence
+
+    DelClassIntF()
+
+return(lConfigure)
+
+static function Execute(bWindowInit as codeblock,cTitle as character) as logical
+
+    local lConfigure as logical
+
+    private oMsgItem0 as object
+    private oMsgItem1 as object
+    private oMsgItem2 as object
+    private oMsgItem3 as object
+    private oMsgItem4 as object
+    private oMsgItem5 as object
+
+    DEFINE WINDOW oMainWnd FROM 01,01 TO 22,75 TITLE OemToAnsi(cTitle)
+
+        oMainWnd:oMsgBar:=TMsgBar():New(oMainWnd,Space(2)+OemToAnsi(GetVersao()),.F.,.F.,.F.,.F.,RGB(116,116,116),,,.F.,"fw_rodape_logo")
+        oApp:oMainWnd:=oMainWnd
+
+        IF (Type("oApp:lShortCut")=="L")
+            oApp:lShortCut:=.F.
+        EndIF
+
+        oApp:lFlat:=.F.
+
+        DEFINE MSGITEM oMsgItem0 OF oMainWnd:oMsgBar PROMPT Time()          SIZE 100 ACTION GetSDIInfo()
+        DEFINE MSGITEM oMsgItem1 OF oMainWnd:oMsgBar PROMPT oApp:dDataBase  SIZE 100 ACTION GetSDIInfo()
+        DEFINE MSGITEM oMsgItem2 OF oMainWnd:oMsgBar PROMPT cTitle          SIZE 100 ACTION GetSDIInfo()
+        DEFINE MSGITEM oMsgItem3 OF oMainWnd:oMsgBar PROMPT "USER FUNCTION" SIZE 100 ACTION GetSDIInfo()
+        DEFINE MSGITEM oMsgItem4 OF oMainWnd:oMsgBar PROMPT "UF"            SIZE 100 ACTION GetSDIInfo()
+        DEFINE MSGITEM oMsgItem5 OF oMainWnd:oMsgBar PROMPT "DNA Tech"      SIZE 100 ACTION GetSDIInfo()
+
+        lConfigure:=MyIsAdmin()
+
+    ACTIVATE WINDOW oMainWnd MAXIMIZED ON INIT (if(lConfigure,(lConfigure:=Eval(bWindowInit),oMainWnd:End()),oMainWnd:End()))
+
+    FreeObj(@oMsgItem0)
+    FreeObj(@oMsgItem1)
+    FreeObj(@oMsgItem2)
+    FreeObj(@oMsgItem3)
+    FreeObj(@oMsgItem4)
+    FreeObj(@oMsgItem5)
+
+    FreeObj(@oApp)
+
+    DelClassIntF()
+
+return(lConfigure)
+
+static Function MyIsAdmin() as logical
+
+    local cUsr:=Space(50) as character
+    local cPdw:=Space(50) as character
+
+    local lRet:=.F. as logical
+
+    local oOk as object
+    local oDlg as object
+    local oBmp as object
+    local oPanel as object
+    local oCancel as object
+
+    DEFINE MSDIALOG oDlg FROM 0,0 TO 135,305 TITLE "Login" PIXEL OF oMainWnd
+
+        @ 000,00 MSPANEL oPanel OF oDlg
+        oPanel:Align:=CONTROL_ALIGN_ALLCLIENT
+
+        @ 005,05 SAY "Usuário" SIZE 60,07 OF oPanel PIXEL
+        @ 013,05 MSGET cUsr SIZE 80,08 OF oPanel PIXEL
+
+        @ 028,05 SAY "Senha" SIZE 60,07 OF oPanel PIXEL
+        @ 036,05 MSGET cPdw  SIZE 80,08 PASSWORD OF oPanel PIXEL
+
+        @ 010,100 BITMAP oBmp RESNAME "UF_LOGIN" SIZE 55,55 NOBORDER OF oPanel PIXEL
+
+        DEFINE SBUTTON oOk FROM 53,27 TYPE 1 ENABLE OF oPanel PIXEL ;
+        ACTION (lRet:=VldAdmin(cUsr,cPdw),If(lRet,oDlg:End(),nil))
+
+        DEFINE SBUTTON oCancel FROM 53,57 TYPE 2 ENABLE OF oPanel PIXEL ACTION oDlg:End()
+
+    ACTIVATE MSDIALOG oDlg CENTER
+
+    FWFreeObj(@oOk)
+    FWFreeObj(@oBmp)
+    FWFreeObj(@oCancel)
+    FWFreeObj(@oPanel)
+    FWFreeObj(@oDlg)
+
+    DelClassIntF()
+
+    if ((lRet).and.(FindFunction("FWMONITORMSG")))
+        FWMonitorMsg("UF.main.exec :: Logged : "+Alltrim(cUsr))
+    EndIf
+
+return(lRet)
+
+static function VldAdmin(cUsr as character,cPdw as character) as logical
+
+    local aPswRet as array
+
+    local lRet:=.F. as logical
+
+    FWMsgRun(nil,{||lRet:=(PswAdmin(Alltrim(cUsr),Alltrim(cPdw))==0)},nil,"Validando ...")
+
+    if (!lRet)
+        ApMsgStop("Usuário não é administrador."+CRLF+"Apenas administradores podem executar este processo.")
+    else
+        aPswRet:=PswRet()
+        __cUserID:=aPswRet[1][1]
+        cUserName:=aPswRet[1][2]
+        cAcesso:=Replicate("S",512)
+        cUsuario:=Replicate("*",6)
+        cUsuario+=SubStr(Padr(aPswRet[1][2],15),1,15)
+        cUsuario+=aPswRet[2][5]
+        oApp:cUserName:=aPswRet[1][2]
+	    oApp:cUserID:=aPswRet[1][1]
+        PswOrder(1)
+        PswSeek(oApp:cUserID)
+        FWFreeArray(@aPswRet)
+    endif
+
+return(lRet)

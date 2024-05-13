@@ -1,0 +1,454 @@
+/*----------------------------------------------------------------------
+         __          _                 _                                                 _
+ _   _  / _|    ___ | |_   __ _   ___ | | __ _ __    __ _  _ __   __ _  _ __ ___    ___ | |_   ___  _ __  ___
+| | | || |_    / __|| __| / _` | / __|| |/ /| '_ \  / _` || '__| / _` || '_ ` _ \  / _ \| __| / _ \| '__|/ __|
+| |_| ||  _| _ \__ \| |_ | (_| || (__ |   < | |_) || (_| || |   | (_| || | | | | ||  __/| |_ |  __/| |   \__ \
+ \__,_||_|  (_)|___/ \__| \__,_| \___||_|\_\| .__/  \__,_||_|    \__,_||_| |_| |_| \___| \__| \___||_|   |___/
+                                            |_|
+*/
+
+#include "totvs.ch"
+#include "tlpp-core.th"
+#include "thash.ch"
+#include "parmtype.ch"
+#include "tryexception.ch"
+#include "stackparameters.th"
+
+namespace uf
+using namespace uf
+
+class stackParameters
+
+    static method GetStackParameters() as array
+    static method CleanStackParameters(cScope as character,aKeepParameters as array) as array
+    static method ReadStackParameters(cStack as character,cParameter as character,cScope as character,cModule as character,aStackParameters as array) as variant
+
+endclass
+
+method GetStackParameters() class stackParameters
+return(GetStackParameters())
+
+static function GetStackParameters()
+
+    local aStackEnv as array
+    local aStackParameters:=Array(0) as array
+
+    local cCRLF:=CRLF as character
+
+    local cStack as character
+    local cModule as character
+    local cStackEnv as character
+    local cSub5StackEnv as character
+    local cUpperStackEnv as character
+
+    local lIscBlock as logical
+
+    local nStack as numeric
+    local nIndexEnv as numeric
+    local nStackEnv as numeric
+
+    local oException as object
+
+    TRYEXCEPTION
+
+        UserException("IGetStackParameters")
+
+    CATCHEXCEPTION USING oException
+
+        cStackEnv:=oException:ErrorEnv
+
+        cStackEnv:=strTran(cStackEnv,cCRLF,"@__CRLF__@")
+        cStackEnv:=strTran(cStackEnv,CHR(10),"@__CRLF__@")
+        cStackEnv:=strTran(cStackEnv,CHR(13),"@__CRLF__@")
+        cStackEnv:=strTran(cStackEnv,"@__CRLF__@",cCRLF)
+
+        if (!(;
+                    (CHR(10)$cStackEnv);
+                    .and.;
+                    (CHR(13)$cStackEnv);
+            ))
+            cStackEnv:=strTran(cStackEnv,"  ",cCRLF)
+            cStackEnv:=strTran(cStackEnv,"STACK ",cCRLF+"STACK ")
+        endif
+
+        aStackEnv:=strTokArr2(cStackEnv,cCRLF)
+
+        cStackEnv:=""
+
+        nIndexEnv:=0
+        nStackEnv:=Len(aStackEnv)
+
+        while ((++nIndexEnv)<=nStackEnv)
+
+            cUpperStackEnv:=Upper(AllTrim(aStackEnv[nIndexEnv]))
+            cSub5StackEnv:=SubStr(cUpperStackEnv,1,5)
+
+            if ("PUBLIC"$cUpperStackEnv)
+
+                if ("PUBLICAS"==cUpperStackEnv)
+                    loop
+                endif
+
+                nStack:=aScan(aStackParameters,{|x|(x[1]=="PUBLIC")})
+
+                if (nStack==0)
+                    aAdd(aStackParameters,{"PUBLIC","",Array(0)})
+                    nStack:=Len(aStackParameters)
+                endif
+
+                cStackEnv:=aStackEnv[nIndexEnv]
+                AddStackParameters(@aStackParameters,@nStack,@cStackEnv)
+
+            elseif ("STACK"==cSub5StackEnv)
+
+                cStackEnv:=AllTrim(StrTran(aStackEnv[nIndexEnv],"STACK",""))
+
+                lIscBlock:=(("{"$cStackEnv).and.("}"$cStackEnv).and.("|"$cStackEnv))
+
+                if (lIscBlock)
+                    cStack:=SubStr(cStackEnv,AT("{",cStackEnv),RAT("}",cStackEnv))
+                else
+                    cStack:=SubStr(cStackEnv,1,AT("(",cStackEnv)-1)
+                endif
+
+                cModule:=StrTran(cStackEnv,cStack,"")
+
+                nStack:=aScan(aStackParameters,{|x|(x[1]==cStack)})
+
+                if (nStack==0)
+                    aAdd(aStackParameters,{cStack,cModule,Array(0)})
+                    nStack:=Len(aStackParameters)
+                endif
+
+                if ((++nIndexEnv)>nStackEnv)
+                    exit
+                endif
+
+                cUpperStackEnv:=Upper(AllTrim(aStackEnv[nIndexEnv]))
+                cSub5StackEnv:=SubStr(cUpperStackEnv,1,5)
+
+                while (;
+                            ((nIndexEnv)<=nStackEnv);
+                            .and.;
+                            (!("STACK"==cSub5StackEnv));
+                            .and.;
+                            (!("FILES"==cSub5StackEnv));
+                            .and.;
+                            (!("FIELD"==cSub5StackEnv));
+                      )
+
+                    cStackEnv:=aStackEnv[nIndexEnv]
+
+                    if (++nIndexEnv>nStackEnv)
+                        exit
+                    endif
+
+                    cUpperStackEnv:=Upper(AllTrim(aStackEnv[nIndexEnv]))
+                    cSub5StackEnv:=SubStr(cUpperStackEnv,1,5)
+
+                       while (;
+                                ((nIndexEnv)<=nStackEnv);
+                                .and.;
+                                (!("STACK"==cSub5StackEnv));
+                                .and.;
+                                (!("FILES"==cSub5StackEnv));
+                                .and.;
+                                (!("PARAM"==cSub5StackEnv));
+                                .and.;
+                                (!("FIELD"==cSub5StackEnv));
+                                .and.;
+                                (!("LOCAL"==cSub5StackEnv));
+                                .and.;
+                                (!("PRIVATE"==SubStr(cUpperStackEnv,1,7)));
+                       )
+
+                        cStackEnv+=aStackEnv[nIndexEnv]
+
+                        if ((++nIndexEnv)>nStackEnv)
+                            exit
+                        endif
+
+                        cUpperStackEnv:=Upper(AllTrim(aStackEnv[nIndexEnv]))
+                        cSub5StackEnv:=SubStr(cUpperStackEnv,1,5)
+
+                    end while
+
+                    --nIndexEnv
+
+                    AddStackParameters(@aStackParameters,@nStack,@cStackEnv)
+
+                    if (++nIndexEnv>nStackEnv)
+                        exit
+                    endif
+
+                    cUpperStackEnv:=Upper(AllTrim(aStackEnv[nIndexEnv]))
+                    cSub5StackEnv:=SubStr(cUpperStackEnv,1,5)
+
+                   end while
+
+                   --nIndexEnv
+
+            elseif ("FILES"==cSub5StackEnv)
+
+                exit
+
+            endif
+
+        end while
+
+    ENDEXCEPTION
+
+    FWFreeArray(@aStackEnv)
+
+return(aStackParameters)
+
+static function AddStackParameters(aStackParameters as array,nStack as numeric,cStackEnv as character)
+
+    local aScope as array
+    local aTokens:=strTokArr2(allTrim(cStackEnv),":") as array
+    local aDateFormat as array
+
+    local cType as character
+    local cScope as character
+    local cParameter as character
+    local cDateFormat:=Set(4) as character
+
+    local dDate as date
+
+    local nToken as numeric
+    local nTokens:=Len(aTokens) as numeric
+    local nParameter as numeric
+    local nDateFormat as numeric
+
+    local uValue as variant
+
+    if (nTokens>=1)
+        aScope:=strTokArr2(allTrim(aTokens[1])," ")
+        if (Len(aScope)>=1)
+            cScope:=Upper(AllTrim(aScope[1]))
+        else
+            cScope:="UNDEFINED"
+        endif
+    else
+        cScope:="UNDEFINED"
+    endif
+
+    if (nTokens>=2)
+        cStackEnv:=aTokens[2]
+        cParameter:=AllTrim(SubStr(cStackEnv,1,AT("(",cStackEnv)-1))
+        cType:=SubStr(cStackEnv,AT("(",cStackEnv)+1,1)
+    else
+        cParameter:="NULL"
+        cType:="U"
+    endif
+
+    if (nTokens>=3)
+        uValue:=aTokens[3]
+        if (nTokens>3)
+            nToken:=3
+            while ((++nToken)<=nTokens)
+                uValue+=aTokens[nToken]
+            end while
+        endif
+    else
+        uValue:=nil
+    endif
+
+    TRYEXCEPTION
+
+        if (cScope$"PUBLIC/PRIVATE")
+
+            uValue:=&(cParameter)
+
+        else
+
+            do case
+                case (cType=="C")
+                    //...
+                case (cType=="N")
+                    uValue:=Val(uValue)
+                case (cType=="D")
+                    dDate:=Ctod(uValue)
+                    if (Empty(dDate))
+                        aDateFormat:={"yyyy/mm/dd","yyyy-mm-dd","mm/dd/yyyy","mm-dd-yyyy","dd/mm/yyyy","dd-mm-yyyy"}
+                        for nDateFormat:=1 To Len(aDateFormat)
+                            Set(4,aDateFormat[nDateFormat])
+                            dDate:=Ctod(uValue)
+                            if (!Empty(dDate))
+                                exit
+                            endif
+                        next nDateFormat
+                    endif
+                    uValue:=dDate
+                case (cType=="L")
+                    uValue:=&(uValue)
+                case (cType=="B")
+                    uValue:=&(uValue)
+                case (cType=="A")
+                    uValue:={}
+                case (cType$"U/O")
+                    uValue:=nil
+            otherwise
+                uValue:=nil
+            end case
+
+        endif
+
+    CATCHEXCEPTION
+
+        do case
+            case (cType=="C")
+                uValue:=""
+            case (cType=="N")
+                uValue:=0
+            case (cType=="D")
+                dDate:=Ctod("")
+            case (cType=="L")
+                uValue:=.F.
+            case (cType=="B")
+                uValue:={||.F.}
+            case (cType=="A")
+                uValue:={}
+            case (cType$"U/O")
+                uValue:=nil
+        otherwise
+            uValue:=nil
+        end case
+
+    ENDEXCEPTION
+
+    aAdd(aStackParameters[nStack][3],Array(STACK_INDEX_ELEMENTS))
+
+    nParameter:=Len(aStackParameters[nStack][3])
+
+    aStackParameters[nStack][3][nParameter][STACK_INDEX_PARAMETER]:=cParameter
+    aStackParameters[nStack][3][nParameter][STACK_INDEX_SCOPE]:=cScope
+    aStackParameters[nStack][3][nParameter][STACK_INDEX_TYPE]:=cType
+    aStackParameters[nStack][3][nParameter][STACK_INDEX_VALUE]:=uValue
+
+    Set(4,cDateFormat)
+
+return(nil)
+
+static method CleanStackParameters(cScope,aKeepParameters) class stackParameters
+
+    local aStackParameters as array
+
+    local cVar as character
+    local cType as character
+    local cClassName as character
+
+    local nVar as numeric
+    local nVars as numeric
+
+    local nParameter as numeric
+    local nParameters as numeric
+
+    local uVar as variant
+
+    paramtype cScope as character optional default "PUBLIC;PRIVATE"
+    paramtype aKeepParameters as array optional default array(0)
+    cScope:=Upper(AllTrim(cScope))
+
+    aStackParameters:=stackParameters():GetStackParameters()
+
+    nParameters:=Len(aStackParameters)
+    for nParameter:=1 to nParameters
+        nVars:=Len(aStackParameters[nParameter][3])
+        for nVar:=1 to nVars
+            if (aStackParameters[nParameter][3][nVar][2]$cScope)
+                cType:=aStackParameters[nParameter][3][nVar][3]
+                if (cType$"C|D|L|N")
+                    cVar:=aStackParameters[nParameter][3][nVar][1]
+                    if (aScan(aKeepParameters,{|cKeep|(cKeep==cVar)})>0)
+                        loop
+                    endif
+                    if (type(cVar)==cType)
+                        aStackParameters[nParameter][3][nVar][4]:=nil
+                        &(cVar):=nil
+                    endif
+                elseif (cType$"A|J|O")
+                    cVar:=aStackParameters[nParameter][3][nVar][1]
+                    if (aScan(aKeepParameters,{|cKeep|(cKeep==cVar)})>0)
+                        loop
+                    endif
+                    if (type(cVar)==cType)
+                        if (cType=="A")
+                            FWFreeArray(@aStackParameters[nParameter][3][nVar][4])
+                        elseif (cType=="O")
+                            uVar:=aStackParameters[nParameter][3][nVar][4]
+                            cClassName:=GetClassName(uVar)
+                            if (cClassName$CLS_NAME_THASH)
+                                uVar:FreeObj()
+                            endif
+                            FreeObj(@uVar)
+                        elseif (cType=="J")
+                            uVar:=aStackParameters[nParameter][3][nVar][4]
+                            uVar:Clean()
+                            FreeObj(@uVar)
+                        endif
+                        &(cVar):=nil
+                    endif
+                endif
+            endif
+        next nVar
+    next nParameter
+
+    FWFreeArray(@aKeepParameters)
+
+return(aStackParameters)
+
+method ReadStackParameters(cStack,cParameter,cScope,cModule,aStackParameters) class stackParameters
+return(ReadStackParameters(@cStack,@cParameter,@cScope,@cModule,@aStackParameters))
+
+static function ReadStackParameters(cStack,cParameter,cScope,cModule,aStackParameters) as variant
+
+    local bAscan as codeblock
+
+    local lScope as logical
+    local lModule as logical
+
+    local nStack as numeric
+    local nParameter as numeric
+
+    local uValue as variant
+
+    begin sequence
+
+        DEFAULT aStackParameters:=GetStackParameters()
+
+        if Empty(aStackParameters)
+            break
+        endif
+
+        lModule:=(!Empty(cModule))
+
+        if (lModule)
+            bAscan:={|x|(x[1]==cStack).and.(cModule$x[2])}
+        else
+            bAscan:={|x|(x[1]==cStack)}
+        endif
+
+        nStack:=aScan(aStackParameters,bAscan)
+        if (nStack==0)
+            break
+        endif
+
+        lScope:=(!Empty(cScope))
+
+        if (lScope)
+            bAscan:={|x|(x[STACK_INDEX_PARAMETER]==cParameter).and.(x[STACK_INDEX_SCOPE]==cScope)}
+        else
+            bAscan:={|x|(x[STACK_INDEX_PARAMETER]==cParameter)}
+        endif
+
+        nParameter:=aScan(aStackParameters[nStack][3],bAscan)
+        if (nParameter==0)
+            break
+        endif
+
+        uValue:=aStackParameters[nStack][3][nParameter][STACK_INDEX_VALUE]
+
+    end sequence
+
+return(uValue)

@@ -1,0 +1,1160 @@
+/*----------------------------------------------------------------------
+         __     _                _              _
+ _   _  / _|   | |_   ___ __  __| |_    __   __(_)  ___ __      __
+| | | || |_    | __| / _ \\ \/ /| __|   \ \ / /| | / _ \\ \ /\ / /
+| |_| ||  _| _ | |_ |  __/ >  < | |_  _  \ V / | ||  __/ \ V  V /
+ \__,_||_|  (_) \__| \___|/_/\_\ \__|(_)  \_/  |_| \___|  \_/\_/
+
+*/
+
+#include "totvs.ch"
+#include "shell.ch"
+#include "fileio.ch"
+#include "parmtype.ch"
+#include "tlpp-core.th"
+
+static __aAccentuation as array
+static __nAccentuation as numeric
+
+namespace uf
+using namespace uf
+
+class TextView
+
+    static method Show(xMsg as variant,cTitulo as character,cLabel as character,aButtons as array,bValid as codeblock,lQuebraLinha as logical,lSoExibeMsg as logical,lShowRuler as logical) as logical
+    static method ShowHtml(cHTML as character,cTitle as character,cHTMLTempFile as character,cBaseURL as character) as logical
+    static method ShowHTMLXML(cXML as character,cTitle as character,lPrismJS as logical) as logical
+    static method ShowHTMLJSON(cJSON as character,cTitle as character,lPrismJS as logical) as logical
+    static method ShowHTMLRESTAPI(cTitle as character,lAjax as logical) as logical
+
+    static method GetOS() as character
+    static method WebAccentuation(cString as character) as character
+
+end class
+
+static method Show(xMsg,cTitulo,cLabel,aButtons,bValid,lQuebraLinha,lSoExibeMsg,lShowRuler) class TextView
+
+    local aRules as array
+    local aAdvSize as array
+    local aObjSize as array
+    local aObjCoords as array
+    local aInfoAdvSize as array
+
+    local bOk as codeblock
+    local bCancel as codeblock
+
+    local cMsg:="" as character
+    local cLib as character
+    local cCRLF:=CRLF as character
+    local cFile as character
+    local cType as character
+
+    local cRulerMemoEdit:="" as character
+    local cRuler1,cRuler2,cRulerDash,cRulerInterval as character
+
+    local lRet:=.F. as logical
+    local lRedefineBottom:=(FwIsInCallStack("UF.EXECUTE").or.FwIsInCallStack("DNA.TECH.EXECUTE")) as logical
+
+    local i as numeric
+    local j as numeric
+
+    local nDlgWidth as numeric
+    local nDlgHeight as numeric
+
+    local nRuler,nRules,nRulerSize as numeric
+
+    local oDlg as object
+    local oFont as object
+    local oPanel as object
+    local oMemoView as object
+
+    local nQuebra:=68 as numeric
+
+    DEFAULT xMsg:=""
+
+    paramtype 1 var cTitulo as character optional default ""
+    paramtype 2 var cLabel as character optional default ""
+    paramtype 3 var aButtons as array optional default array(0)
+    paramtype 4 var bValid as block optional default {||.T.}
+    paramtype 5 var lQuebraLinha as logical optional default .F.
+    paramtype 6 var lSoExibeMsg as logical optional default .F.
+    paramtype 7 var lShowRuler as logical optional default .F.
+
+    bOk:={||;
+        If(Eval(bValid),;
+        (;
+            cMsg:=strTran(cMsg,cRulerMemoEdit,""),;
+            UFNotepad(.T.,cMsg,cFile),;
+            cMsg:=cRulerMemoEdit+cMsg,;
+            lRet:=.T.,;
+            oDlg:End();
+        ),);
+    }
+
+    bCancel:={||;
+        cMsg:=strTran(cMsg,cRulerMemoEdit,""),;
+        UFNotepad(.T.,cMsg,cFile),;
+        cMsg:=cRulerMemoEdit+cMsg,;
+        oDlg:End();
+    }
+
+    cFile:="UF."
+    cFile+=CriaTrab(nil,.F.)
+    cFile+=".txt"
+
+    oFont:=TFont():New("Courier New",09,15)
+
+    begin sequence
+
+        GetRemoteType(@cLib)
+        if ("WIN"$cLib)
+            aAdd(aButtons,{"NOTE",;
+                {||;
+                    cMsg:=strTran(cMsg,cRulerMemoEdit,""),;
+                    UFNotepad(.F.,cMsg,cFile),;
+                    cMsg:=cRulerMemoEdit+cMsg;
+                },"NotePad"})
+        endif
+
+        cType:=ValType(xMsg)
+        if (cType=="C")
+            cMsg:=xMsg
+        elseif (cType=="A")
+            for i:=1 to Len(xMsg)
+                if (xMsg[i][2])//Posicao que define se fara quebra de linha
+                    For j:=1 to MLCount(xMsg[i][1],nQuebra)
+                        cMsg+=MemoLine(xMsg[i][1],nQuebra,j)+cCRLF
+                    Next j
+                else
+                    cMsg+=xMsg[i][1]
+                endif
+            next i
+        endif
+
+        aAdvSize:=MsAdvSize()
+        aInfoAdvSize:={aAdvSize[1],aAdvSize[2],aAdvSize[3],aAdvSize[4],0,0}
+        aObjCoords:=array(0)
+        aAdd(aObjCoords,{0,0,.T.,.T.})
+        aObjSize:=MsObjSize(aInfoAdvSize,aObjCoords)
+
+        if (lRedefineBottom)
+            aAdvSize[6]-=30
+            aObjSize[1][3]-=12
+        endif
+
+        DEFINE MSDIALOG oDlg TITLE cTitulo FROM aAdvSize[7],0 TO aAdvSize[6],aAdvSize[5] OF GetWndDefault() STYLE DS_MODALFRAME STATUS PIXEL
+
+            nDlgWidth:=__DlgWidth(oDlg)
+            nDlgHeight:=__DlgHeight(oDlg)
+
+            oPanel:=tPanel():New(0,0,"",oDlg,nil,nil,nil,nil,nil,nDlgWidth,nDlgHeight)
+
+            //Verifica se Irá mostrar "Regua"
+            if (lShowRuler)
+                //Obtem as Linhas conforme LF
+                aRules:=StrTokArr2(cMsg,chr(10))
+                //Verifica qual maior linha para a definição da Regua
+                nRulerSize:=0
+                nRules:=Len(aRules)
+                for nRuler:=1 to nRules
+                    nRulerSize:=Max(nRulerSize,Len(aRules[nRuler]))
+                next nRuler
+                FWFreeArray(@aRules)
+                //Cria dados com o Tamanho da maior linha
+                cRuler1:=Replicate("W",nRulerSize)
+                //Obtem o intervalo da Regua
+                cRuler1:=UF.UFTools():TextRuler(cRuler1,.T.)
+                //Obtem o intervalo da Regua (10x)
+                cRuler2:=UF.UFTools():TextRuler(cRuler1,.F.)
+                //Obtem o Separador de Linha
+                cRulerDash:=Replicate("-",nRulerSize)
+                //Obtem o Separador de Coluna
+                cRulerInterval:=Replicate("|",nRulerSize)
+                //Salva a mensagem Original
+                xMsg:=cMsg
+                //Concatena a Regua
+                cRulerMemoEdit:=cRuler1
+                //Define nova mensagem considerando a regua
+                cRulerMemoEdit+=cCRLF
+                cRulerMemoEdit+=cRulerInterval
+                cRulerMemoEdit+=cCRLF
+                cRulerMemoEdit+=cRuler2
+                cRulerMemoEdit+=cCRLF
+                cRulerMemoEdit+=cRulerInterval
+                cRulerMemoEdit+=cCRLF
+                cRulerMemoEdit+=cRuler1
+                cRulerMemoEdit+=cCRLF
+                cRulerMemoEdit+=cRulerDash
+                cRulerMemoEdit+=cCRLF
+                //Acrescenta a Mensagem Original
+                cMsg:=cRulerMemoEdit
+                cMsg+=xMsg
+                //Limpa variaveis temporarias
+                cRulerDash:=""
+                cRulerInterval:=""
+            endif
+
+            @(aObjSize[1][1]+5),(aObjSize[1][2]+5) GET oMemoView VAR cMsg MEMO HSCROLL SIZE ((aObjSize[1][4]/100)*99),((aObjSize[1][3]/100)*88) FONT oFont CENTERED DESIGN OF oPanel PIXEL WHEN (.T.)
+
+            oMemoView:lWordWrap:=lQuebraLinha
+            oMemoView:lReadOnly:=.F.
+            oMemoView:EnableVScroll(.T.)
+            oMemoView:EnableHScroll(.T.)
+
+            oDlg:lEscClose:=.F.
+            oDlg:lCentered:=(!lRedefineBottom)
+
+        ACTIVATE MSDIALOG oDlg On INIT Enchoicebar(oDlg,bOk,bCancel,nil,aButtons,nil,nil,nil,nil,!lSoExibeMsg,!lSoExibeMsg)
+
+    end sequence
+
+    FreeObj(@oFont)
+    FreeObj(@oMemoView)
+    FreeObj(@oPanel)
+    FreeObj(@oDlg)
+
+    FWFreeArray(@aAdvSize)
+    FWFreeArray(@aObjSize)
+    FWFreeArray(@aObjCoords)
+    FWFreeArray(@aInfoAdvSize)
+
+return(lRet)
+
+static method ShowHtml(cHTML,cTitle,cHTMLTempFile,cBaseURL) class TextView
+
+    local aButtons as array
+
+    local cFile as character
+
+    local jButtons as json
+
+    local lAbrir as logical
+    local lShowHtml:=.T. as logical
+    local lRedefineBottom:=(FwIsInCallStack("UF.EXECUTE").or.FwIsInCallStack("DNA.TECH.EXECUTE")) as logical
+
+    local nTop as numeric
+    local nLeft as numeric
+    local nBottom as numeric
+    local nRight as numeric
+
+    local oDlg as object
+    local oGrp as object
+
+    local oTWebEngine as object
+    local oTWebChannel as object
+
+    local oFWDefSize as object
+
+    paramtype 1 var cHTML as character optional default ""
+    paramtype 2 var cTitle as character optional default ""
+    paramtype 3 var cHTMLTempFile as character optional default ""
+    paramtype 4 var cBaseURL as character optional default ""
+
+    begin sequence
+
+        lShowHtml:=(!empty(cBaseURL))
+        if (!lShowHtml)
+            break
+        endif
+
+        jButtons:=JSONObject():New()
+
+        aButtons:=array(0)
+        aAdd(aButtons,{"&Sair",{||oDlg:End()},OemToAnsi("Sair"),OemtoAnsi("Sair")})
+        aAdd(aButtons,{"&Print",{||oTWebEngine:Print()},OemToAnsi("Print"),OemtoAnsi("Print")})
+        aAdd(aButtons,{"Print PD&F",{||oTWebEngine:PrintPDF()},OemToAnsi("Print PDF"),OemtoAnsi("Print PDF")})
+
+        cFile:=cHTMLTempFile
+        cFile:=strTran(cFile,"file:///","")
+        cFile:=strTran(cFile,"/","\")
+        lAbrir:=file(cFile)
+
+        if (lAbrir)
+            aAdd(aButtons,{"&Abrir",{||ShellExecute("open",cHTMLTempFile,"","",SW_SHOWMAXIMIZED)},OemToAnsi("Abir"),OemtoAnsi("Abir")})
+        endif
+
+        oFWDefSize:=FWDefSize():New(.F.,.F.)
+        oFWDefSize:lLateral:=.F.
+        oFWDefSize:AddObject("TWebEngine",100,95,.T.,.T.)
+        oFWDefSize:AddObject("ButtonActions",100,05,.F.,.F.)
+
+        oFWDefSize:Process()
+
+        nTop:=oFWDefSize:aWindSize[1]
+        nLeft:=oFWDefSize:aWindSize[2]
+        nBottom:=oFWDefSize:aWindSize[3]
+        nRight:=oFWDefSize:aWindSize[4]
+
+        if (lRedefineBottom)
+            nBottom-=50
+        endif
+
+        DEFINE MSDIALOG oDlg TITLE cTitle FROM nTop,nLeft TO nBottom,nRight OF GetWndDefault() STATUS PIXEL
+
+            nTop:=oFWDefSize:GetDimension("TWebEngine","LININI")
+            nLeft:=oFWDefSize:GetDimension("TWebEngine","COLINI")
+            nBottom:=oFWDefSize:GetDimension("TWebEngine","LINEND")
+            nRight:=oFWDefSize:GetDimension("TWebEngine","COLEND")
+
+            nTop-=5
+            nBottom+=1
+            nRight-=5
+
+            if (lRedefineBottom)
+                nBottom-=25
+            endif
+
+            oTWebChannel:=TWebChannel():New()
+            oTWebChannel:Connect()
+
+            oTWebEngine:=TWebEngine():New(oDlg,nTop,nLeft,nRight,nBottom,/*cURL*/,oTWebChannel:nPort)
+            oTWebEngine:Align:=CONTROL_ALIGN_ALLCLIENT
+
+            nTop:=oFWDefSize:GetDimension("ButtonActions","LININI")
+            nBottom:=oFWDefSize:GetDimension("ButtonActions","LINEND")
+
+            if (lRedefineBottom)
+                nTop-=25
+                nBottom-=25
+            endif
+
+            nTop-=3
+            nRight+=3
+
+            @ nTop,03 GROUP oGrp TO nBottom+2,nRight PROMPT "" OF oDlg COLOR 0,16777215 PIXEL
+
+            nTop+=1
+            nRight+=5
+
+            //Botoes (da direita pra a esquerda)
+            @ nTop,(nRight)-((50*1)+06) BUTTON jButtons["1"] PROMPT aButtons[1][1] SIZE 50,08 OF oGrp ACTION Eval(aButtons[1][2]) PIXEL
+            @ nTop,(nRight)-((50*2)+09) BUTTON jButtons["2"] PROMPT aButtons[2][1] SIZE 50,08 OF oGrp ACTION Eval(aButtons[2][2]) PIXEL
+            @ nTop,(nRight)-((50*3)+12) BUTTON jButtons["3"] PROMPT aButtons[3][1] SIZE 50,08 OF oGrp ACTION Eval(aButtons[3][2]) PIXEL
+            if (lAbrir)
+                @ nTop,(nRight)-((50*4)+15) BUTTON jButtons["4"] PROMPT aButtons[4][1] SIZE 50,08 OF oGrp ACTION Eval(aButtons[4][2]) PIXEL
+            endif
+
+            oDlg:lEscClose:=.F.
+
+            FWMsgRun(nil,{||oTWebEngine:SetHtml(cHtml,cBaseURL)/*,oTWebEngine:Navigate()*/},"Aguarde...","Carregando Arquivo")
+
+            oDlg:lCentered:=(!lRedefineBottom)
+
+        ACTIVATE MSDIALOG oDlg
+
+        oTWebChannel:Disconnect()
+
+    end sequence
+
+    FWFreeArray(@aButtons)
+
+    FreeObj(oGrp)
+    FreeObj(oDlg)
+    FreeObj(jButtons)
+    FreeObj(oFWDefSize)
+
+    FreeObj(oTWebEngine)
+    FreeObj(oTWebChannel)
+
+    DelClassIntF()
+
+return(lShowHtml)
+
+static method ShowHTMLXML(cXML,cTitle,lPrismJS) class TextView
+
+    local cURL as character
+    local cHTML as character
+    local cBaseURL as character
+    local lShowHTMLXML as logical
+
+    paramtype 1 var cXML as character optional default ""
+    paramtype 2 var cTitle as character optional default ""
+    paramtype 3 var lPrismJS as logical optional default .T.
+
+    cURL:=UFMakeHTMLXMLView(@cXML,@cTitle,@cHTML,@cBaseURL,@lPrismJS)
+
+    lShowHTMLXML:=!Empty(cURL)
+    if (lShowHTMLXML)
+        UFJShowHTML(@cHTML,@cTitle,@cURL,@cBaseURL)
+    endif
+
+return(lShowHTMLXML)
+
+static method ShowHTMLJSON(cJSON,cTitle,lPrismJS) class TextView
+
+    local cURL as character
+    local cHTML as character
+    local cBaseURL as character
+    local lShowHTMLJSON as logical
+
+    paramtype 1 var cJSON as character optional default ""
+    paramtype 2 var cTitle as character optional default ""
+    paramtype 3 var lPrismJS as logical optional default .T.
+
+    cURL:=UFMakeHTMLJSONView(@cJSON,@cTitle,@cHTML,@cBaseURL,@lPrismJS)
+
+    lShowHTMLJSON:=!Empty(cURL)
+    if (lShowHTMLJSON)
+        UFJShowHTML(@cHTML,@cTitle,@cURL,@cBaseURL)
+    endif
+
+return(lShowHTMLJSON)
+
+static method ShowHTMLRESTAPI(cTitle,lAjax) class TextView
+
+    local cURL as character
+    local cHTML as character
+    local cBaseURL as character
+    local lhtmlRESTAPIShow as logical
+
+    paramtype 1 var cTitle as character optional default ProcName()
+    paramtype 2 var lAjax as logical optional default .F.
+
+    cURL:=UFMakeHTMLRESTAPIView(@cTitle,@lAjax,@cHTML,@cBaseURL)
+
+    lhtmlRESTAPIShow:=!Empty(cURL)
+    if (lhtmlRESTAPIShow)
+        UFJShowHTML(@cHTML,@cTitle,@cURL,@cBaseURL)
+    endif
+
+return(lhtmlRESTAPIShow)
+
+static method GetOS() class TextView
+
+    local cOS as character
+    local cStringOS:=Upper(GetRmtInfo()[2]) as character
+
+    local nRemoteType:=GetRemoteType() as numeric
+
+    begin sequence
+
+        if ((nRemoteType==0).or.(nRemoteType==1))
+            cOS:="WINDOWS"
+            break
+        endif
+
+        if (nRemoteType==2 )
+            cOS:="UNIX"// Linux ou MacOS
+            break
+        endif
+
+        if (nRemoteType==5)
+            cOS:="HTML" // Smartclient HTML
+        endif
+
+        if ("ANDROID"$cStringOS)
+            cOS:="ANDROID"
+        endif
+
+        if ("IPHONEOS"$cStringOS)
+            cOS:="IPHONEOS"
+            break
+        endif
+
+        cOS:=""
+
+    end sequence
+
+return(cOS)
+
+static function UFJShowHTML(cHTML as character,cTitle as character,cHTMLTempFile as character,cBaseURL as character) as logical
+return(UF.TextView():ShowHTML(cHTML,cTitle,cHTMLTempFile,cBaseURL))
+
+static function UFMakeHTMLXMLView(cXML as character,cTitle as character,cHTML as character,cBaseURL as character,lPrismJS as logical) as character
+
+    local cURL as character
+
+    local cTmpFile as character
+
+    local oTXMLManager:=TXMLManager():New() as object
+
+    local lHasXML as logical
+
+    begin sequence
+
+        lPrismJS:=.T.
+
+        lHasXML:=oTXMLManager:Parse(cXML)
+        if (!lHasXML)
+            beginContent var cXML
+                <?xml version="1.0" encoding="UTF-8"?>
+                <memoField>
+                    <message>cXML</message>
+                </memoField>
+            endContent
+            cXML:=strTran(cXML,"                ","")
+            cXML:=strTran(cXML,"cXML",cXML)
+            cXML:=EncodeUTF8(cXML)
+            oTXMLManager:=TXMLManager():New()
+            lHasXML:=oTXMLManager:Parse(cXML)
+            if (!lHasXML)
+                break
+            endif
+        endif
+
+        cXML:=oTXMLManager:Save2String()
+
+        cBaseURL:="https://cdn.jsdelivr.net/npm/bootstrap/dist/css/bootstrap.min.css"
+
+        beginContent var cHTML
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+    <!-- https://prismjs.com/ -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/themes/prism.min.css" rel="stylesheet" />
+    <!-- bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+<!-- Custom CSS -->
+    <style>
+        body {
+            padding: 20px;
+        }
+        pre {outline: 1px solid #ccc; padding: 5px; margin: 5px; background-color: #ccc; }
+        .string { color: green; }
+        .number { color: darkorange; }
+        .boolean { color: blue; }
+        .null { color: magenta; }
+        .key { color: red; }
+    </style>
+    <title>cTitle</title>
+</head>
+<body>
+
+    <div class="container-fluid">
+        <h1>cTitle</h1>
+        <div id="XML-container" class="code mt-4">
+    </div>
+
+    <!-- Custom JavaScript -->
+    <script>
+        // Converte a string XML em um objeto JavaScript
+        var XMLData = `cXML`;
+        // Exibe o XML formatado no container
+        const div = document.getElementById("XML-container");
+        // Criar um elemento pre para exibir a string formatada
+        const preElement = document.createElement('pre');
+        // Criar um elemento code com a classe 'language-xml' para destacar a sintaxe XML
+        const codeElement = document.createElement('code');
+        codeElement.className = 'language-XML';
+        //Pretty printing XML with javascript
+        var prettifyXMLData = prettifyXml(XMLData);
+        //Carrega o XML Formatado
+        codeElement.textContent = prettifyXMLData;
+        // Adicionar o elemento code ao elemento pre
+        preElement.appendChild(codeElement);
+        // Adicionar o elemento pre ao div
+        div.appendChild(preElement);
+        function prettifyXml(sourceXml)
+        {
+            var xmlDoc = new DOMParser().parseFromString(sourceXml, 'application/xml');
+            var xsltDoc = new DOMParser().parseFromString([
+                // describes how we want to modify the XML - indent everything
+                '<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+                '  <xsl:strip-space elements="*"/>',
+                '  <xsl:template match="para[content-style][not(text())]">', // change to just text() to strip space in text nodes
+                '    <xsl:value-of select="normalize-space(.)"/>',
+                '  </xsl:template>',
+                '  <xsl:template match="node()|@*">',
+                '    <xsl:copy><xsl:apply-templates select="node()|@*"/></xsl:copy>',
+                '  </xsl:template>',
+                '  <xsl:output indent="yes"/>',
+                '</xsl:stylesheet>',
+            ].join('\n'), 'application/xml');
+            var xsltProcessor = new XSLTProcessor();
+            xsltProcessor.importStylesheet(xsltDoc);
+            var resultDoc = xsltProcessor.transformToDocument(xmlDoc);
+            var resultXml = new XMLSerializer().serializeToString(resultDoc);
+            return resultXml;
+        };
+    </script>
+    <!-- https://prismjs.com/ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <!-- bootstrap -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core/dist/umd/popper.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
+</body>
+</html>
+        endContent
+
+        cHTML:=StrTran(cHTML,"cTitle",cTitle)
+        cHTML:=StrTran(cHTML,"cXML",cXML)
+
+        cTmpFile:=GetTempPath()
+        cTmpFile+=CriaTrab(nil,.F.)+".html"
+
+        if (!MemoWrite(cTmpFile,cHTML))
+            break
+        endif
+
+        cURL:=""
+        cURL+="file:///"
+        cURL+=cTmpFile
+        cURL:=strTran(cURL,"\","/")
+
+    end sequence
+
+    FreeObj(@oTXMLManager)
+
+    DelClassIntF()
+
+return(cURL)
+
+static function UFMakeHTMLJSONView(cJSON as character,cTitle as character,cHTML as character,cBaseURL as character,lPrismJS as logical) as character
+
+    local cURL as character
+
+    local cTmpFile as character
+
+    local jMemo:=JSONObject():New() as json
+
+    local lHasJSON as logical
+
+    begin sequence
+
+        DEFAULT lPrismJS:=.T.
+
+        lHasJSON:=(jMemo:FromJSON(cJSON)==NIL)
+        if (!lHasJSON)
+            jMemo["message"]:=cJSON
+            cJSON:=jMemo:ToJSON()
+            lHasJSON:=(jMemo:FromJSON(cJSON)==NIL)
+            if (!lHasJSON)
+                break
+            endif
+        endif
+
+        cBaseURL:="https://cdn.jsdelivr.net/npm/bootstrap/dist/css/bootstrap.min.css"
+
+    if (!lPrismJS)
+
+        beginContent var cHTML
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <!-- Custom CSS -->
+    <style>
+        body {
+            padding: 20px;
+        }
+        pre {outline: 1px solid #ccc; padding: 5px; margin: 5px; background-color: #ccc; }
+        .string { color: green; }
+        .number { color: darkorange; }
+        .boolean { color: blue; }
+        .null { color: magenta; }
+        .key { color: red; }
+    </style>
+    <title>cTitle</title>
+</head>
+<body>
+
+    <div class="container-fluid">
+        <h1>cTitle</h1>
+        <div id="json-container" class="mt-4">
+    </div>
+
+    <!-- Custom JavaScript -->
+    <script>
+        // Converte a string JSON em um objeto JavaScript
+        var jsonData = JSON.parse('cJSON');
+        // Converte o JSON em uma string formatada
+        var formattedJson = JSON.stringify(jsonData, null, 4);
+        //syntaxHighlight
+        function syntaxHighlight(json) {
+            json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                var cls = 'number';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'key';
+                    } else {
+                        cls = 'string';
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'boolean';
+                } else if (/null/.test(match)) {
+                    cls = 'null';
+                }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
+        }
+        formattedJson=syntaxHighlight(formattedJson);
+        // Exibe o JSON formatado no container
+        const div = document.getElementById("json-container");
+        // append the paragraph to the div element
+        div.appendChild(document.createElement('pre')).innerHTML=formattedJson;
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap/dist/js/bootstrap.bundle.min.js"  crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core/dist/umd/popper.min.js"  crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
+</body>
+</html>
+        endContent
+
+    else
+        beginContent var cHTML
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+    <!-- https://prismjs.com/ -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/themes/prism.min.css" rel="stylesheet" />
+    <!-- bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+<!-- Custom CSS -->
+    <style>
+        body {
+            padding: 20px;
+        }
+        pre {outline: 1px solid #ccc; padding: 5px; margin: 5px; background-color: #ccc; }
+        .string { color: green; }
+        .number { color: darkorange; }
+        .boolean { color: blue; }
+        .null { color: magenta; }
+        .key { color: red; }
+    </style>
+    <title>cTitle</title>
+</head>
+<body>
+
+    <div class="container-fluid">
+        <h1>cTitle</h1>
+        <div id="json-container" class="code mt-4">
+    </div>
+
+    <!-- Custom JavaScript -->
+    <script>
+        // Converte a string JSON em um objeto JavaScript
+        var jsonData = JSON.parse('cJSON');
+        // Converte o JSON em uma string formatada
+        var formattedJson = JSON.stringify(jsonData, null, 4);
+        // Exibe o JSON formatado no container
+        const div = document.getElementById("json-container");
+        // Criar um elemento pre para exibir a string formatada
+        const preElement = document.createElement('pre');
+        // Criar um elemento code com a classe 'language-json' para destacar a sintaxe JSON
+        const codeElement = document.createElement('code');
+        codeElement.className = 'language-json';
+        codeElement.textContent = formattedJson;
+        // Adicionar o elemento code ao elemento pre
+        preElement.appendChild(codeElement);
+        // Adicionar o elemento pre ao div
+        div.appendChild(preElement);
+    </script>
+    <!-- https://prismjs.com/ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <!-- bootstrap -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core/dist/umd/popper.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
+</body>
+</html>
+        endContent
+
+    endif
+
+        cHTML:=StrTran(cHTML,"cTitle",cTitle)
+        cHTML:=StrTran(cHTML,"cJSON",cJSON)
+
+        cTmpFile:=GetTempPath()
+        cTmpFile+=CriaTrab(nil,.F.)+".html"
+
+        if (!MemoWrite(cTmpFile,cHTML))
+            break
+        endif
+
+        cURL:=""
+        cURL+="file:///"
+        cURL+=cTmpFile
+        cURL:=strTran(cURL,"\","/")
+
+    end sequence
+
+    FreeObj(@jMemo)
+
+    DelClassIntF()
+
+return(cURL)
+
+static function UFMakeHTMLRESTAPIView(cTitle as character,lAjax as logical,cHTML as character,cBaseURL as character) as character
+
+    local cURL as character
+
+    local cTmpFile as character
+    local cJSFunRealizarChamadaAPI as character
+
+    begin sequence
+
+        cBaseURL:="https://cdn.jsdelivr.net/npm/bootstrap/dist/css/bootstrap.min.css"
+
+        if (lAjax)
+            beginContent var cJSFunRealizarChamadaAPI
+function realizarChamadaAPI(verb) {
+
+    var endpoint = $('#endpoint').val();
+    var headers = $('#headers').val();
+    var body = $('#body').val();
+
+    if (!endpoint) {
+        alert('Por favor, informe o endpoint da API.');
+        return;
+    }
+
+    // URL da API
+    var apiUrl = endpoint;
+
+    // Configuracao da requisicao AJAX
+    var ajaxConfig = {
+        url: apiUrl,
+        type: verb,
+        timeout: 5000,  // Defina o tempo limite em milissegundos (ex: 5000 ms para 5 segundos)
+        success: function (data) {
+            // Exibir a resposta da API no elemento de pre-formatado
+            $('#resposta-api').text(JSON.stringify(data, null, 2));
+        },
+        error: function (xhr, status, error) {
+            // Exibir mensagem de erro em caso de falha
+            $('#resposta-api').text('Erro ao chamar a API. Verifique o console para mais detalhes.\n'+xhr.responseText+'\n'+status+'\n'+error);
+            console.error('Erro ao chamar a API:', xhr.responseText+'\n'+status+'\n'+error);
+        }
+    };
+
+    // Adicionar cabecalhos a requisicao se existirem
+    if (headers) {
+        try {
+            var headersObj = JSON.parse(headers);
+            ajaxConfig.headers = headersObj;
+        } catch (e) {
+            alert('Erro ao analisar os cabecalhos. Certifique-se de que estao em formato JSON valido.');
+            return;
+        }
+    }
+
+    // Adicionar corpo da requisicao se existir
+    if (body) {
+        ajaxConfig.data = body;
+        ajaxConfig.contentType = 'application/json';
+    }
+
+    // Exibir a animacao de carregamento
+    $('.loading').show();
+
+    // Realizar chamada a API usando jQuery
+    $.ajax(ajaxConfig)
+      .always(function() {
+        $('.loading').hide();
+      });
+}
+            endContent
+        else
+            beginContent var cJSFunRealizarChamadaAPI
+function realizarChamadaAPI(verb) {
+
+    var endpoint = $('#endpoint').val();
+    var headers = $('#headers').val();
+    var body = $('#body').val();
+
+    if (!endpoint) {
+        alert('Por favor, informe o endpoint da API.');
+        return;
+    }
+
+    var apiUrl = endpoint;
+
+    // Criacao do objeto XMLHttpRequest
+    var xhr;
+    try {
+        xhr = new XMLHttpRequest();
+    } catch (e) {
+        try {
+            xhr = new XDomainRequest();
+        } catch (e) {
+            try {
+                xhr = new ActiveXObject('Msxml2.XMLHTTP');
+            } catch (e) {
+                try {
+                    xhr = new ActiveXObject('Microsoft.XMLHTTP');
+                } catch (e) {
+                    alert('Your browser is not compatible with XHR');
+                    return;
+                }
+            }
+        }
+    }
+
+    // Configuracao da requisicao
+    xhr.open(verb, apiUrl, true);
+
+    // Configuracao dos cabecalhos
+    if (headers) {
+        try {
+            var headersObj = JSON.parse(headers);
+            for (var key in headersObj) {
+                xhr.setRequestHeader(key, headersObj[key]);
+            }
+        } catch (e) {
+            alert('Erro ao analisar os cabecalhos. Certifique-se de que estao em formato JSON valido.');
+            return;
+        }
+    }
+
+    // Exibir a animacao de carregamento
+    $('.loading').show();
+
+    // Configuracao do corpo da requisicao
+    if (body) {
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.send(body);
+    } else {
+        xhr.send();
+    }
+
+    // Tratamento da resposta
+    xhr.onload = function () {
+        try {
+            $('#resposta-api').text(JSON.stringify(JSON.parse(xhr.responseText), null, 2));
+        } catch (e) {
+            $('#resposta-api').text(e+'\n'+xhr.responseText+'\n'+xhr.statusText);
+            return;
+        }
+        $('.loading').hide();
+    };
+
+    // Tratamento de erros
+    xhr.onerror = function () {
+        $('#resposta-api').text('Erro ao chamar a API. Verifique o console para mais detalhes. '+xhr.statusText);
+        console.error('Erro ao chamar a API:', xhr.statusText);
+        $('.loading').hide();
+    };
+}
+            endContent
+        endif
+
+        beginContent var cHTML
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+      <title>cTitle</title>
+      <style>
+        body {
+          padding: 20px;
+        }
+        .loading {
+          display: none;
+          vertical-align: middle; /* Alinha verticalmente com os botoes */
+        }
+        .spinner-border {
+          width: 1.5rem;
+          height: 1.5rem;
+        }
+        .blocks
+        {
+            margin: 0 5px;
+            border-radius: 0;
+        }
+      </style>
+    </head>
+    <body>
+
+    <div class="container">
+      <h2>Teste de API REST</h2>
+
+      <div class="form-group">
+        <label for="endpoint">Endpoint:</label>
+        <input type="text" class="form-control" id="endpoint" placeholder="Informe o endpoint da API">
+      </div>
+
+      <div class="form-group">
+        <label for="headers">Cabecalhos (Headers):</label>
+        <textarea class="form-control" id="headers" rows="2" placeholder="Informe os cabecalhos da requisicao (JSON format)"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="body">Corpo da Requisicao:</label>
+        <textarea class="form-control" id="body" rows="15" placeholder="Informe o corpo da requisicao"></textarea>
+      </div>
+
+      <div class="btn-group" role="group" aria-label="Chamadas de API">
+          <button type="button" class="btn btn-primary blocks" onclick="realizarChamadaAPI('GET')">GET</button>
+          <button type="button" class="btn btn-success blocks" onclick="realizarChamadaAPI('POST')">POST</button>
+          <button type="button" class="btn btn-warning blocks" onclick="realizarChamadaAPI('PUT')">PUT</button>
+          <button type="button" class="btn btn-danger  blocks" onclick="realizarChamadaAPI('DELETE')">DELETE</button>
+          <!-- Adicao da animacao de carregamento -->
+          <button type="button" class="loading btn btn-primary-outline blocks">
+            <div class="spinner-border" role="status">
+                <!--<span class="sr-only">Carregando...</span>-->
+            </div>
+          </button>
+      </div>
+
+      <div class="mt-3">
+        <h4>Resposta da API:</h4>
+        <textarea class="form-control" id="resposta-api" rows="15" placeholder="resposta-api"></textarea>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core/dist/umd/popper.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
+
+    <script>
+        cJSFunRealizarChamadaAPI
+    </script>
+
+    </body>
+</html>
+        endContent
+
+        cHTML:=StrTran(cHTML,"cTitle",cTitle)
+        cHTML:=StrTran(cHTML,"cJSFunRealizarChamadaAPI",cJSFunRealizarChamadaAPI)
+
+        cTmpFile:=GetTempPath()
+        cTmpFile+=CriaTrab(nil,.F.)+".html"
+
+        if (!MemoWrite(cTmpFile,cHTML))
+            break
+        endif
+
+        cURL:=""
+        cURL+="file:///"
+        cURL+=cTmpFile
+        cURL:=strTran(cURL,"\","/")
+
+    end sequence
+
+return(cURL)
+
+static function UFNotepad(lApaga,cMsg,cFile)
+
+    local lRet:=.T. as logical
+    local cDir:=GetTempPath() as character
+    local hFile as numeric
+
+    DEFAULT lApaga:=.F.//Se .T. apaga arquivo temporario.
+
+    if (!lApaga)
+        hFile:=fCreate(cDir+cFile)
+        fWrite(hFile,cMsg,Len(cMsg))
+        fClose(hFile)
+        ShellExecute("open",cDir+cFile,"","", 1)
+    else
+        if (File(cDir+cFile))
+            fErase(cDir+cFile)
+        endif
+    endif
+
+return(lRet)
+
+static method WebAccentuation(cString) class TextView
+
+    local cStr as character
+    local cAccent as character
+    local cWebString as character
+
+    local nAT as numeric
+
+    paramtype 1 var cString as character
+    cWebString:=cString
+
+    getAccentuation()
+    uf.dfv():DefaultEmpty(@__nAccentuation,len(__aAccentuation))
+
+    for nAT:=1 to __nAccentuation
+        cStr:=__aAccentuation[nAT][1]
+        cAccent:=("&"+__aAccentuation[nAT][3]+";")
+        cWebString:=strTran(cWebString,cStr,cAccent)
+    next nAccent
+
+return(cWebString)
+
+static function getAccentuation() as array
+
+    if (empty(__aAccentuation))
+        __aAccentuation:={;
+            {chr(009),"","HT"},;
+            {chr(010),"","LF"},;
+            {chr(013),"","CR"},;
+            {chr(129),"","129"},;
+            {chr(141),"",""},;
+            {chr(143),"","143"},;
+            {chr(144),"","144"},;
+            {chr(157),"","157"},;
+            {chr(185),"1","sup1"},;
+            {chr(186),"o","ordm"},;
+            {chr(188),"1/4","frac14"},;
+            {chr(189),"1/2","frac12"},;
+            {chr(190),"3/4","frac34"},;
+            {chr(191),"?","iquest"},;
+            {chr(192),"A","Agrave"},;
+            {chr(195),"A","Atilde"},;
+            {chr(196),"A","Auml"},;
+            {chr(197),"A","Aring"},;
+            {chr(198),"AE","AElig"},;
+            {chr(224),"a","agrave"},;
+            {chr(225),"a","aacute"},;
+            {chr(226),"a","acirc"},;
+            {chr(227),"a","atilde"},;
+            {chr(228),"a","auml"},;
+            {chr(229),"a","aring"},;
+            {chr(230),"ae","aelig"},;
+            {chr(200),"E","Egrave"},;
+            {chr(201),"E","Eacute"},;
+            {chr(202),"E","Ecirc"},;
+            {chr(203),"E","Euml"},;
+            {chr(232),"e","egrave"},;
+            {chr(233),"e","eacute"},;
+            {chr(234),"e","ecirc"},;
+            {chr(235),"e","euml"},;
+            {chr(204),"I","Igrave"},;
+            {chr(205),"I","Iacute"},;
+            {chr(206),"I","Icirc"},;
+            {chr(207),"I","Iuml"},;
+            {chr(236),"i","igrave"},;
+            {chr(237),"i","iacute"},;
+            {chr(238),"i","icirc"},;
+            {chr(239),"i","iuml"},;
+            {chr(210),"O","Ograve"},;
+            {chr(211),"O","Oacute"},;
+            {chr(212),"O","Ocirc"},;
+            {chr(213),"O","Otilde"},;
+            {chr(214),"O","Ouml"},;
+            {chr(242),"o","ograve"},;
+            {chr(243),"o","oacute"},;
+            {chr(244),"o","ocirc"},;
+            {chr(245),"o","otilde"},;
+            {chr(246),"o","ouml"},;
+            {chr(216),"O","Oslash"},;
+            {chr(217),"U","Ugrave"},;
+            {chr(218),"U","Uacute"},;
+            {chr(219),"U","Ucirc"},;
+            {chr(220),"U","Uuml"},;
+            {chr(221),"Y","Yacute"},;
+            {chr(249),"u","ugrave"},;
+            {chr(250),"u","uacute"},;
+            {chr(251),"u","ucirc"},;
+            {chr(252),"u","uuml"},;
+            {chr(253),"y","yacute"},;
+            {chr(209),"N","Ntilde"},;
+            {chr(241),"n","ntilde"},;
+            {chr(199),"C","Ccedil"},;
+            {chr(231),"c","ccedil"};
+        }
+    endif
+
+    __nAccentuation:=len(__aAccentuation)
+
+return(__aAccentuation)

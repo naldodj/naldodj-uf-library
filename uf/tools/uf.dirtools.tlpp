@@ -1,0 +1,507 @@
+/*----------------------------------------------------------------------
+         __         _  _        _                  _
+ _   _  / _|     __| |(_) _ __ | |_   ___    ___  | | ___
+| | | || |_     / _` || || '__|| __| / _ \  / _ \ | |/ __|
+| |_| ||  _| _ | (_| || || |   | |_ | (_) || (_) || |\__ \
+ \__,_||_|  (_) \__,_||_||_|    \__| \___/  \___/ |_||___/
+
+*/
+
+#include "parmtype.ch"
+#include "directry.ch"
+#include "tlpp-core.th"
+
+namespace uf
+using namespace uf
+
+class dirtools
+
+    static method MakeDir(cDirMake as character) as logical
+    static method MakeFileDir(cDirMake as character) as logical
+
+    static method DirRemove(cDirRoot as character,cDirRemove as character) as logical
+
+    static method BrowseFiles(cTitle as character,cDirectory as character,cMask as character,nTypeOrder as numeric,bLDblClick as codeblock,bCustomHeaderClick as codeblock,aCustomButtons as array) as variant
+
+end class
+
+static method MakeDir(cDirMake) class dirtools
+    local lIsDir as logical
+    paramtype cDirMake as character
+    if ("/"$cDirMake)
+        cDirMake:=strTran(cDirMake,"/","\")
+    endif
+    lIsDir:=lIsDir(cDirMake)
+    if (!lIsDir)
+        lIsDir:=UF.dirtools():MakeFileDir(cDirMake)
+    endif
+    return(lIsDir)
+
+static method MakeFileDir(cDirMake) class dirtools
+
+    local aDirs as array
+
+    local cExt as character
+    local cFile as character
+    local cPath as character
+    local cDrive as character
+    local cFullPath as character
+
+    local lIsDir as logical
+
+    local nAttempt:=0 as numeric
+    local nAttempts as numeric
+
+    paramtype cDirMake as character
+
+    cExt:=""
+    cFile:=""
+    cPath:=""
+    cDrive:=""
+
+    splitPath(cDirMake,@cDrive,@cPath,@cFile,@cExt)
+
+    cFullPath:=cDrive
+    cFullPath+=cPath
+
+    aDirs:=StrTokArr2(cFullPath,"\")
+    nAttempts:=Len(aDirs)
+
+    lIsDir:=UF.DirMake(cFullPath,@cDrive,@cPath,@cFile,@cExt)
+    while (!lIsDir)
+        lIsDir:=UF.DirMake(cFullPath,@cDrive,@cPath,@cFile,@cExt)
+        if (lIsDir)
+            exit
+        endif
+        if (++nAttempt>nAttempts)
+            exit
+        endif
+    end while
+
+    FWFreeArray(@aDirs)
+
+    return(lIsDir)
+
+static method DirRemove(cDirRoot,cDirRemove) class dirtools
+
+    local aDirs as array
+
+    local cExt as character
+    local cFile as character
+    local cPath as character
+    local cDrive as character
+
+    local cFullPathRoot as character
+
+    local lDirRemove as logical
+
+    local nAttempt:=0 as numeric
+    local nAttempts as numeric
+
+    paramtype cDirRoot as character
+    paramtype cDirRemove as character optional default cDirRoot
+
+    cExt:=""
+    cFile:=""
+    cPath:=""
+    cDrive:=""
+
+    splitPath(cDirRoot,@cDrive,@cPath,@cFile,@cExt)
+
+    cFullPathRoot:=cDrive
+    cFullPathRoot+=cPath
+
+    lDirRemove:=UF.RemoveDir(cFullPathRoot,cDirRemove,@cDrive,@cPath,@cFile,@cExt)
+    while (!lDirRemove)
+        lDirRemove:=UF.RemoveDir(@cFullPathRoot,@cDirRemove,@cDrive,@cPath,@cFile,@cExt)
+        if (lDirRemove)
+            exit
+        endif
+        if (++nAttempt>nAttempts)
+            exit
+        endif
+    end while
+
+    FWFreeArray(@aDirs)
+
+    return(lDirRemove)
+
+static method BrowseFiles(cTitle,cDirectory,cMask,nTypeOrder,bLDblClick,bCustomHeaderClick,aCustomButtons) class dirtools
+    paramtype 1 var cTitle as character
+    paramtype 2 var cDirectory as character
+    paramtype 3 var cMask as character
+    paramtype 4 var nTypeOrder as numeric optional default 1
+    paramtype 5 var bLDblClick as block optional default {|oSelf|}
+    paramtype 6 var bCustomHeaderClick as block optional default {|oSelf|}
+    paramtype 7 var aCustomButtons as array optional default array(0)
+return(BrowseFiles(cTitle,cDirectory,cMask,nTypeOrder,bLDblClick,bCustomHeaderClick,aCustomButtons))
+
+static function DirMake(cDirMake as character,cDrive as character,cPath as character,cFile as character,cExt as character) as logical
+
+    local aDirectory as array
+
+    local cDirectory as character
+    local cTDirectory as character
+
+    local lIsDir as logical
+
+    local nD as numeric
+    local nJ as numeric
+
+    lIsDir:=lIsDir(cDirMake)
+
+    if (!lIsDir)
+
+        aDirectory:=StrTokArr2(cDirMake,"\")
+
+        cTDirectory:=""
+
+        nJ:=len(aDirectory)
+        for nD:=1 to nJ
+            cDirectory:=aDirectory[nD]
+            if (empty(cDirectory))
+                loop
+            endif
+            cTDirectory+=if(cDrive$cDirectory,"","\")
+            cTDirectory+=cDirectory
+            cTDirectory+="\"
+            cTDirectory:=strTran(cTDirectory,"\\","\")
+            if (lIsDir(cTDirectory))
+                loop
+            endif
+            if (!makeDir(cTDirectory))
+                exit
+            endif
+        next nD
+
+        lIsDir:=lIsDir(cDirMake)
+
+    endif
+
+    FWFreeArray(@aDirectory)
+
+    return(lIsDir)
+
+static function RemoveDir(cRootDir,cRemoveDir as character,cDrive as character,cPath as character,cFile as character,cExt as character) as logical
+
+    local aDirectory as array
+
+    local cDirectory as character
+    local cTDirectory as character
+    local cRootDirBas:=cRootDir as character
+
+    local lRemoveDir as logical
+
+    local nD as numeric
+    local nJ as numeric
+
+    lRemoveDir:=!lIsDir(cRootDir)
+
+    if (!lRemoveDir)
+
+        aDirectory:=StrTokArr2(cRootDir,"\")
+
+        cTDirectory:=""
+
+        nJ:=len(aDirectory)
+        for nD:=nJ to 1 step -1
+            cDirectory:=aDirectory[nD]
+            if (empty(cDirectory))
+                loop
+            endif
+            cTDirectory:=if(cDrive$cDirectory,"","\")
+            cTDirectory+=cDirectory
+            cTDirectory+="\"
+            cTDirectory:=strTran(cTDirectory,"\\","\")
+            if (!(lRemoveDir:=lIsDir(cRootDir)))
+                loop
+            endif
+            if (cTDirectory$Right(cRootDir,Len(cTDirectory)))
+                if (!(lRemoveDir:=DirRemove(cRootDir)))
+                    exit
+                endif
+                cRootDir:=strTran(cRootDir,cTDirectory,"")
+                if (Right(cRootDir,1)<>"\")
+                    cRootDir+="\"
+                endif
+                cRemoveDir:=strTran(cRemoveDir,cTDirectory,"")
+                if (Right(cRemoveDir,1)<>"\")
+                    cRemoveDir+="\"
+                endif
+            endif
+        next nD
+
+        lRemoveDir:=!lIsDir(cRootDirBas)
+
+    endif
+
+    FWFreeArray(@aDirectory)
+
+    return(lRemoveDir)
+
+static function BrowseFiles(cTitle as character,cDirectory as character,cMask as character,nTypeOrder as numeric,bLDblClick as codeblock,bCustomHeaderClick as codeblock,aCustomButtons as array) as variant
+
+    local aFWBrwSeek as array
+    local aFWBrwData as array
+    local aFWBrwModel as array
+    local aFWBrwFilter as array
+    local aFWBrwColumn as array
+    local aFWBrowseSeek as array
+
+    local aFWGetDialogSizeCoors as array
+
+    local bSetDelete as codeblock
+
+    local cLDblClick as character
+    local cCustomHeaderClick as character
+
+    local lRedefineBottom:=(FWIsInCallStack("UF.EXECUTE").or.FwIsInCallStack("DNA.TECH.EXECUTE")) as logical
+
+    local nField,nFields as numeric
+    local nButton,nButtons as numeric
+
+    local oFWBrowse as object
+    local oPanelMain as object
+    local oFWDialogModal as object
+
+    begin sequence
+
+        aFWBrwData:=BrowseFilesGetFiles(cDirectory,cMask,nTypeOrder)
+
+        aFWBrwSeek:=array(0)
+        aFWBrwModel:=array(0)
+        aFWBrwColumn:=array(0)
+        aFWBrowseSeek:=array(0)
+        aFWBrwFilter:=array(0)
+
+        aFWGetDialogSizeCoors:=FWGetDialogSize()
+
+        aAdd(aFWBrwModel,{"Arquivo",'@!',254,0,1,"C"})
+        aAdd(aFWBrwModel,{"Tamanho",'9999999999999999',16,0,1,"N"})
+        aAdd(aFWBrwModel,{"Data",'@D',8,0,1,"D"})
+        aAdd(aFWBrwModel,{"Hora",'@!',8,0,1,"C"})
+        aAdd(aFWBrwModel,{"Atributo",'@!',1,0,1,"C"})
+
+        nFields:=Len(aFWBrwModel)
+        For nField:=1 To nFields
+
+            aAdd(aFWBrwFilter,;
+                {;
+                    aFWBrwModel[nField][1],;//Campo
+                    aFWBrwModel[nField][1],;//Titulo
+                    aFWBrwModel[nField][6],;//Tipo de dado
+                    aFWBrwModel[nField][3],;//Tamanho
+                    aFWBrwModel[nField][4],;//Decimal
+                    aFWBrwModel[nField][2];//Picture
+                };
+            )
+
+            aAdd(aFWBrwColumn,FWBrwColumn():New())
+
+            aFWBrwColumn[nField]:SetData(&('{|oSelf|aFWBrwData[oFWBrowse:nAT]['+LTrim(Str(nField))+']}'))
+            aFWBrwColumn[nField]:SetTitle(aFWBrwModel[nField][1])
+            aFWBrwColumn[nField]:SetPicture(aFWBrwModel[nField][2])
+            aFWBrwColumn[nField]:SetSize(aFWBrwModel[nField][3])
+            aFWBrwColumn[nField]:SetDecimal(aFWBrwModel[nField][4])
+            aFWBrwColumn[nField]:SetAlign(aFWBrwModel[nField][5])
+
+            aAdd(aFWBrwSeek,;
+                {;
+                    aFWBrwModel[nField][1],;//[n,1] Titulo da pesquisa
+                    {;
+                        {;
+                            "",;//[n,2,n,1] LookUp (F3)
+                            aFWBrwModel[nField][6],;//[n,2,n,2] Tipo de dados
+                            aFWBrwModel[nField][3],;//[n,2,n,3] Tamanho
+                            aFWBrwModel[nField][4],;//[n,2,n,4] Decimal
+                            aFWBrwModel[nField][1],;//[n,2,n,5] Titulo do campo
+                            aFWBrwModel[nField][2];//[n,2,n,6] Mascara
+                        };
+                    };
+                };
+            )
+
+            aAdd(aFWBrowseSeek,aClone(aFWBrwSeek))
+            aSize(aFWBrwSeek,0)
+
+        Next nField
+
+        oFWBrowse:=FWBrowse():New()
+
+        oFWBrowse:AddStatusColumns(;
+            {|oSelf|;
+                if(;
+                    (!File(cDirectory+aFWBrwData[oSelf:AT()][F_NAME])),;
+                    "BR_VERMELHO",;
+                    "BR_VERDE";
+                );
+            };
+        )
+
+        oFWBrowse:SetDataArray()
+        oFWBrowse:SetArray(aFWBrwData)
+        oFWBrowse:SetColumns(aFWBrwColumn)
+*       oFWBrowse:SetSeek({||.T.},aFWBrowseSeek)
+        oFWBrowse:SetUseFilter()
+        oFWBrowse:SetFieldFilter(aFWBrwFilter)
+
+        bSetDelete:={|oSelf|;
+            if(;
+                (;
+                    (fErase(cDirectory+aFWBrwData[oSelf:AT()][F_NAME])==0);
+                    .and.;
+                    (!File(cDirectory+aFWBrwData[oSelf:AT()][F_NAME])),;
+                ),;
+                (;
+                    aDel(aFWBrwData,oSelf:AT()),;
+                    aSize(aFWBrwData,Len(aFWBrwData)-1),;
+                    .T.;
+                ),;
+                .F.;
+            );
+        }
+        oFWBrowse:SetDelete(.T.,bSetDelete)
+
+        if (valtype(bLDblClick)!="B")
+            bLDblClick:={|oSelf|}
+        else
+            cLDblClick:=GetCBSource(bLDblClick)
+            bLDblClick:=&(cLDblClick)
+        endif
+        oFWBrowse:SetDoubleClick(bLDblClick)
+
+        if (valType(bCustomHeaderClick)!="B")
+            bCustomHeaderClick:={|oSelf|}
+        else
+            cCustomHeaderClick:=GetCBSource(bCustomHeaderClick)
+            bCustomHeaderClick:=&(cCustomHeaderClick)
+        endif
+        oFWBrowse:bCustomHeaderClick:=bCustomHeaderClick
+
+        //https://tdn.totvs.com/display/public/framework/FwDialogModal
+        oFWDialogModal:=FWDialogModal():New()
+        oFWDialogModal:SetTitle(cTitle)
+        oFWDialogModal:SetEscClose(.F.)
+        oFWDialogModal:SetSize(aFWGetDialogSizeCoors[3]/(2+if(lRedefineBottom,.15,0)),aFWGetDialogSizeCoors[4]/2)
+        oFWDialogModal:CreateDialog()
+        oFWDialogModal:EnableFormBar(.T.)
+        oFWDialogModal:CreateFormBar()
+
+        oPanelMain:=oFWDialogModal:GetPanelMain()
+        oFWBrowse:SetOwner(oPanelMain)
+
+        FWMsgRun(;
+            nil,;
+            {||;
+                oFWBrowse:Activate(),;
+                if((valtype(oFWBrowse:oFWFilter)=="O"),oFWBrowse:oFWFilter:DisableSave(.T.),nil);//Não Permite salvar o filtro neste Browse
+            },;
+            cTitle,;
+            "Ativando o Browse...";
+        )
+
+        /*
+            FWDialogModal:AddButton
+            estrutura:
+            [n]
+            [n][1] cTitle Titulo do Botao
+            [n][2] bBloco Bloco de codigo que sera executado
+            [n][3] cToolTip Comentario do botao
+            [n][4] nShortCut Tecla para se criar o ShortCurt
+            [n][5] lShowBar Indica que o botao estara visivel na barra
+            [n][6] lConfig Indica se botao estara visivel na configuracao
+            [n][7] ?
+
+        */
+
+        oFWDialogModal:AddButton(;
+            "&Sair",;//[n][1] cTitle Titulo do Botao
+            {||oFWDialogModal:DeActivate(.T./*lFreeChildren*/)},;//[n][2] bBloco Bloco de codigo que sera executado
+            "Sair",;//[n][3] cToolTip Comentario do botao
+            nil,;//[n][4] nShortCut Tecla para se criar o ShortCurt
+            .T.,;//[n][5] lShowBar Indica que o botao estara visivel na barra
+            .F.,;//[n][6] lConfig Indica se botao estara visivel na configuracao
+            .T.;//[n][7] ?
+        )
+
+        oFWDialogModal:AddButton(;
+            "&Excluir",;//[n][1] cTitle Titulo do Botao
+                {||;
+                    if(;
+                        (;
+                            ApMsgNoYes("Deseja Excluir o Arquivo?","Atenção!");
+                        ),;
+                        (;
+                            oFWBrowse:DelLine(),;
+                            oFWBrowse:Refresh(.F.);
+                        ),;
+                        nil;
+                    );
+                },;//[n][2] bBloco Bloco de codigo que sera executado
+                "Excluir",;//[n][3] cToolTip Comentario do botao
+                nil,;//[n][4] nShortCut Tecla para se criar o ShortCurt
+                .T.,;//[n][5] lShowBar Indica que o botao estara visivel na barra
+                .F.,;//[n][6] lConfig Indica se botao estara visivel na configuracao
+                .T.;//[n][7] ?
+            )
+
+        oFWDialogModal:AddButton(;
+            "&Atualizar",;//[n][1] cTitle Titulo do Botao
+                {||;
+                    MsgRun(;
+                        cTitle,;
+                        "Atualizando arquivos. Aguarde...",;
+                        {||;
+                            FWFreeArray(@aFWBrwData),;
+                            aFWBrwData:=BrowseFilesGetFiles(cDirectory,cMask,nTypeOrder),;
+                            oFWBrowse:SetArray(aFWBrwData),;
+                            oFWBrowse:Refresh(.F.);
+                        };
+                    );
+                },;//[n][2] bBloco Bloco de codigo que sera executado
+                "Atualizar",;//[n][3] cToolTip Comentario do botao
+                nil,;//[n][4] nShortCut Tecla para se criar o ShortCurt
+                .T.,;//[n][5] lShowBar Indica que o botao estara visivel na barra
+                .F.,;//[n][6] lConfig Indica se botao estara visivel na configuracao
+                .T.;//[n][7] ?
+            )
+
+            nButtons:=Len(aCustomButtons)
+            for nButton:=1 to nButtons
+                if (len(aCustomButtons[nButton])>=7)
+                    oFWDialogModal:AddButton(;
+                        aCustomButtons[nButton][1],;//[n][1] cTitle Titulo do Botao
+                        aCustomButtons[nButton][2],;//[n][2] bBloco Bloco de codigo que sera executado
+                        aCustomButtons[nButton][3],;//[n][3] cToolTip Comentario do botao
+                            nil,;//[n][4] nShortCut Tecla para se criar o ShortCurt
+                            .T.,;//[n][5] lShowBar Indica que o botao estara visivel na barra
+                            .F.,;//[n][6] lConfig Indica se botao estara visivel na configuracao
+                            .T.;//?
+                        )
+                endif
+            next nButton
+
+        oFWDialogModal:Activate()
+
+    end sequence
+
+    FWFreeArray(@aFWBrwSeek)
+    FWFreeArray(@aFWBrwData)
+    FWFreeArray(@aFWBrwModel)
+    FWFreeArray(@aFWBrwFilter)
+    aEval(aFWBrwColumn,{|o|FreeObj(o)})
+    FWFreeArray(@aFWBrwColumn)
+    FWFreeArray(@aFWBrowseSeek)
+    FWFreeArray(@aFWGetDialogSizeCoors)
+
+    FreeObj(@oFWBrowse)
+    FreeObj(@oPanelMain)
+    FreeObj(@oFWDialogModal)
+
+return(nil)
+
+static function BrowseFilesGetFiles(cDirectory as character,cMask as character,nTypeOrder as numeric) as array
+    local aFiles as array
+    DEFAULT nTypeOrder:=1
+    aFiles:=Directory(cDirectory+cMask/*cDirEsp*/,nil/*cAtributos*/,nil/*uParam1*/,nil/*lCaseSensitive*/,nTypeOrder/*nTypeOrder*/)
+return(aFiles)

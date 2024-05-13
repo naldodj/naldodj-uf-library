@@ -1,0 +1,156 @@
+/*
+         __                       _
+ _   _  / _|    _ __ ___   _   _ | |_   ___ __  __
+| | | || |_    | '_ ` _ \ | | | || __| / _ \\ \/ /
+| |_| ||  _| _ | | | | | || |_| || |_ |  __/ >  <
+ \__,_||_|  (_)|_| |_| |_| \__,_| \__| \___|/_/\_\
+
+*/
+
+#include "totvs.ch"
+#include "parmtype.ch"
+
+namespace uf
+using namespace uf
+
+static oUFHMMutex:=tHashMap():New() as object
+
+class Mutex
+
+    static method Lock(cMutexID as character,cMutexStack as character,nHDLMutex as numeric,nError as numeric) as logical
+    static method UnLock(cMutexID as character,cMutexStack as character) as logical
+    static method Clean(cMutexStack as character) as variant
+
+    static method LockByFile(cHDLMutex as character,nHDLMutex as numeric,nSleep as numeric,nAttempts as numeric,cMutexStack as character,nError as numeric) as logical
+    static method UnLockByFile(cHDLMutex as character,nHDLMutex as numeric,cMutexStack as character) as logical
+
+end class
+
+static method Lock(cMutexID,cMutexStack,nHDLMutex,nError) class Mutex
+    local cIDMutex as character
+    local lLock:=.F. as logical
+    local lShared:=.F. as logical
+    local lHasMutex as logical
+    local oFWThreadSemaphore as object
+    paramtype 1 var cMutexID as character
+    paramtype 2 var cMutexStack as character optional default "_"
+    paramtype 3 var nHDLMutex as numeric optional default (-1)
+    paramtype 4 var nError as numeric optional default 0
+    cIDMutex:=cMutexStack
+    cIDMutex+=if((cMutexStack!="_"),"_","")
+    cIDMutex+=cMutexID
+    lHasMutex:=oUFHMMutex:Get(cIDMutex,@oFWThreadSemaphore)
+    if (!lHasMutex)
+        oFWThreadSemaphore:=FWThreadSemaphore():New()
+        oFWThreadSemaphore:SetID(cIDMutex)
+        if (oFWThreadSemaphore:Exist(cIDMutex))
+            oFWThreadSemaphore:Erase()
+        endif
+        oUFHMMutex:Set(cIDMutex,@oFWThreadSemaphore)
+        lLock:=oFWThreadSemaphore:Open(lShared)
+    else
+        lLock:=(oFWThreadSemaphore:nLCKFile!=(-1))
+        lLock:=((lLock).and.(oFWThreadSemaphore:nError==0))
+        if (!lLock)
+            lLock:=oFWThreadSemaphore:Open(lShared)
+        endif
+    endif
+    nHDLMutex:=oFWThreadSemaphore:nLCKFile
+    nError:=oFWThreadSemaphore:nError
+return(lLock)
+
+static method UnLock(cMutexID,cMutexStack) class Mutex
+    local lUnLock:=.F. as logical
+    local lHasMutex as logical
+    local oFWThreadSemaphore as object
+    paramtype 1 var cMutexID as character
+    paramtype 2 var cMutexStack as character optional default "_"
+    cIDMutex:=cMutexStack
+    cIDMutex+=if(cMutexStack!="_","_","")
+    cIDMutex+=cMutexID
+    lHasMutex:=oUFHMMutex:Get(cIDMutex,@oFWThreadSemaphore)
+    if (lHasMutex)
+        oFWThreadSemaphore:Close()
+        oFWThreadSemaphore:Erase()
+        lUnLock:=(!oFWThreadSemaphore:Exist(cIDMutex))
+    endif
+    FreeObj(@oFWThreadSemaphore)
+    oUFHMMutex:Del(cIDMutex)
+return(lUnLock)
+
+static method Clean(cMutexStack) class Mutex
+
+    local aSemaphores as array
+
+    local cIDMutex as character
+
+    local nSemaphore,nSemaphores as numeric
+
+    paramtype 1 var cMutexStack as character optional default "_"
+
+    oUFHMMutex:List(@aSemaphores)
+
+    nSemaphores:=Len(aSemaphores)
+    for nSemaphore:=1 to nSemaphores
+        cIDMutex:=aSemaphores[nSemaphore][1]
+        if (left(cIDMutex,Len(cMutexStack))==cMutexStack)
+            UF.Mutex():UnLock(cIDMutex,cMutexStack)
+        endif
+    next nSemaphore
+
+    nSemaphores:=Len(aSemaphores)
+    if ((nSemaphores==0).or.(cMutexStack=="_"))
+        oUFHMMutex:Clean()
+    endif
+
+return(nil)
+
+method LockByFile(cHDLMutex,nHDLMutex,nSleep,nAttempts,cMutexStack,nError) class Mutex
+
+    local lMutex as logical
+    local lCreate as logical
+
+    local nAttempt:=0 as numeric
+
+    paramtype 1 var cHDLMutex as character
+    paramtype 2 var nHDLMutex as numeric optional default (-1)
+    paramtype 3 var nSleep as numeric optional default 500
+    paramtype 4 var nAttempts as numeric optional default 50
+    paramtype 5 var cMutexStack as character optional default "_"
+    paramtype 6 var nError as numeric optional default 0
+
+    lCreate:=(nHDLMutex==(-1))
+
+    cHDLMutex:=lower(cHDLMutex)
+
+    if (lCreate)
+        lMutex:=UF.Mutex():Lock(@cHDLMutex,@cMutexStack,@nHDLMutex,@nError)
+        while ((!lMutex).and.(nAttempt<=nAttempts))
+            Sleep(nSleep)
+            lMutex:=UF.Mutex():Lock(@cHDLMutex,@cMutexStack,@nHDLMutex,@nError)
+            nAttempt++
+        end while
+    else
+        if (UF.Mutex():UnLockByFile(@cHDLMutex,@nHDLMutex,@cMutexStack))
+            nHDLMutex:=(-1)
+        endif
+    endif
+
+    lMutex:=(nHDLMutex>=0)
+
+return(lMutex)
+
+method UnLockByFile(cHDLMutex,nHDLMutex,cMutexStack) class Mutex
+    local lUnLock as logical
+    paramtype 1 var cHDLMutex as character
+    paramtype 2 var nHDLMutex as numeric optional default (-1)
+    paramtype 3 var cMutexStack as character optional default "_"
+    cHDLMutex:=lower(cHDLMutex)
+    lUnLock:=(nHDLMutex!=(-1))
+    if (lUnLock)
+        lUnLock:=UF.Mutex():UnLock(@cHDLMutex,@cMutexStack)
+        if (lUnLock)
+            nHDLMutex:=(-1)
+        endif
+    endif
+return(lUnLock)
