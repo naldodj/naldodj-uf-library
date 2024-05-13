@@ -17,9 +17,34 @@ using namespace uf
 static __oUFTTimer as object
 
 class Timer
+
+    static method TimerSleep(nSleep as numeric,nWaits as numeric,bConfirmWait as codeblock) as logical
+
     static method Activate(nInterval as numeric,bAction as codeblock,oDlg as object) as object
     static method DeActivate() as logical
+
 end class
+
+static method TimerSleep(nSleep,nWaits,bConfirmWait) class timer
+
+    local lConfirmWait:=.F. as logical
+
+    local nWait:=0 as numeric
+
+    paramtype 1 var nSleep as numeric optional default 1000
+    paramtype 2 var nWaits as numeric optional default 15
+    paramtype 3 var bConfirmWait as block optional default {||.F.}
+
+    while (((!KillApp()).and.(++nWait)<nWaits))
+        //Aguarda nSleep milisegundos de no maximo nWaits
+        Sleep(nSleep)
+        lConfirmWait:=Eval(bConfirmWait)
+        if (lConfirmWait)
+            exit
+        endif
+    end while
+
+return(lConfirmWait)
 
 static method Activate(nInterval,bAction,oDlg) class Timer
 

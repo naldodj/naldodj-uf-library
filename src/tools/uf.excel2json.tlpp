@@ -277,7 +277,7 @@ static method PSExcel2JSON(cFileInput,cFileOutPut,cPSPathExcelScripts) class Exc
     local nShellExecute:=(-1) as numeric
 
     //Verifica nWaits*1000 a aguardar
-    local nWait,nWaits:=getNewPar("EXL2JON_MW",15) as numeric
+    local nWaits:=getNewPar("EXL2JON_MW",15) as numeric
     //Verifica nAttempts para experar a obtencao do arquivo
     local nAttempt:=0,nAttempts:=getNewPar("EXL2JON_MA",51) as numeric
 
@@ -321,16 +321,10 @@ static method PSExcel2JSON(cFileInput,cFileOutPut,cPSPathExcelScripts) class Exc
                     if ((lPSExcel2JSON).or.(++nAttempt>nAttempts))
                         exit
                     endif
-                    //Aguarda 1 minuto de no maximo nAttempts
-                    nWait:=0
-                    while ((++nWait)<nWaits)
-                        //Aguarda 1 Segundo de no maximo nWaits
-                        Sleep(1000)
-                        lPSExcel2JSON:=file(cFileOutPut)
-                        if (lPSExcel2JSON)
-                            exit
-                        endif
-                    end while
+                    lPSExcel2JSON:=Timer():TimerSleep(1000,nWaits,{||file(cFileOutPut)})
+                    if (lPSExcel2JSON)
+                        exit
+                    endif
                 end while
             endif
         else

@@ -107,7 +107,7 @@ return(nil)
 
 method LockByFile(cHDLMutex,nHDLMutex,nSleep,nAttempts,cMutexStack,nError) class Mutex
 
-    local lMutex as logical
+    local lMutex:=.F. as logical
     local lCreate as logical
 
     local nAttempt:=0 as numeric
@@ -124,10 +124,11 @@ method LockByFile(cHDLMutex,nHDLMutex,nSleep,nAttempts,cMutexStack,nError) class
     cHDLMutex:=lower(cHDLMutex)
 
     if (lCreate)
-        lMutex:=UF.Mutex():Lock(@cHDLMutex,@cMutexStack,@nHDLMutex,@nError)
-        while ((!lMutex).and.(nAttempt<=nAttempts))
-            Sleep(nSleep)
-            lMutex:=UF.Mutex():Lock(@cHDLMutex,@cMutexStack,@nHDLMutex,@nError)
+        while ((!KillApp()).and.(!lMutex).and.(nAttempt<=nAttempts))
+            lMutex:=UF.Timer():TimerSleep(nSleep,15,{||UF.Mutex():Lock(@cHDLMutex,@cMutexStack,@nHDLMutex,@nError)})
+            if (lMutex)
+                exit
+            endif
             nAttempt++
         end while
     else
