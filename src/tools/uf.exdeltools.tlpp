@@ -1,0 +1,327 @@
+/*
+         __                             _  _                  _
+ _   _  / _|     ___ __  __  ___   ___ | || |_   ___    ___  | | ___
+| | | || |_     / _ \\ \/ / / __| / _ \| || __| / _ \  / _ \ | |/ __|
+| |_| ||  _| _ |  __/ >  < | (__ |  __/| || |_ | (_) || (_) || |\__ \
+ \__,_||_|  (_) \___|/_/\_\ \___| \___||_| \__| \___/  \___/ |_||___/
+
+*/
+
+#include "totvs.ch"
+#include "parmtype.ch"
+
+namespace uf
+using namespace uf
+
+class excelTools
+    static method AliasToExcel(cExcelAlias as character,aTmpCustomFields as array,cTitle as character,cFileClient as character,lExcelXlsx as logical,lExcelCSV as logical,bExcelDataFilter as codeblock,cPathExcelServer as character) as logical
+endclass
+
+static method AliasToExcel(cExcelAlias,aTmpCustomFields,cTitle,cFileClient,lExcelXlsx,lExcelCSV,bExcelDataFilter,cPathExcelServer) class excelTools
+
+    local aArea:=FWGetArea()
+    local aExcelDetailArea:=(cExcelAlias)->(FWGetArea())
+
+    local aCells:=Array(0) as array
+    local aHeader as array
+    local aHeaderTitle as array
+
+    local cCRLF:=CRLF as character
+    local cBuffer:="" as character
+    local cTipoRel:=cTitle as character
+    local cTipoRelNoAccent:=FwNoAccent(cTipoRel) as character
+
+    local cPathClient as character
+    local cFileServer as character
+    local cFileServerToClient as character
+
+    local cColumn as character
+    local cField,cFieldType as character
+
+    local cWorkSheet:=cTitle as character
+    local cWBreak:=cWorkSheet as character
+    local cTBreak:=cWBreak as character
+
+    local cPicture as character
+
+    local cSPPDrive,cSPPPath,cSPPFile,cSPPExt as character
+
+    local lTotal:=.F. as logical
+    local lMsExcel as logical
+    local lExcelReport:=.F. as logical
+
+    local nField,nFields,nFieldAT as numeric
+
+    local nAlign as numeric
+    local nFormat as numeric
+    local nhCSVFile as numeric
+
+    local oMsExcel as object
+    local oFWMSExcel as object
+
+    local uCell as variant
+
+    paramtype 1 var cExcelAlias as character
+    paramtype 2 var aTmpCustomFields as array
+    paramtype 3 var cTitle as character
+    paramtype 4 var cFileClient as character
+    paramtype 5 var lExcelXlsx as logical optional default (".xlsx"$Lower(cFileClient))
+    paramtype 6 var lExcelCSV as logical optional default (".csv"$Lower(cFileClient))
+    paramtype 7 var bExcelDataFilter as block optional default {||.T.}
+    paramtype 8 var cPathExcelServer as character optional default "\tmp\totvs\excel\"
+
+    begin sequence
+
+        //Se não existirem informações para a geração da Planilha...
+        if (empty((cExcelAlias)->(RecCount())))
+            //...Avisa ao usuário
+            ApMsgInfo("Não Existem dados a serem Exportados",cTitle)
+            //... e abandona
+            break
+        endif
+
+        //Garante o Posicionamento no Inicio da Tabela
+        (cExcelAlias)->(dbGoTop())
+
+        if (!lIsDir(cPathExcelServer))
+            dirtools():MakeDir(cPathExcelServer)
+        endif
+
+        //Elabora o Nome do Arquivo a ser Gerado
+        cFileServer:=cPathExcelServer
+        cFileServer+=ProcName()
+        cFileServer+="_"
+        cFileServer+=strTran(cTipoRelNoAccent," ","_")
+        cFileServer+="_"
+        cFileServer+=CriaTrab(nil,.F.)
+        cFileServer+=if(lExcelXlsx,".xlsx",if(lExcelCSV,".csv",".xml"))
+
+        cFileServer:=strTran(cFileServer,"::","_")
+        cFileServer:=strTran(cFileServer,"(","_")
+        cFileServer:=strTran(cFileServer,")","_")
+
+        /* Define os Campos dos Detalhes que irão aparecer na Planilha
+            aTmpCustomFields[n][1]=>Nome do Campo
+            aTmpCustomFields[n][2]=>TamSX3=>{Size,Dec,Type}
+            aTmpCustomFields[n][3]=>Título do Campo
+            aTmpCustomFields[n][4]=>Picture do Campo
+            aTmpCustomFields[n][5]=>Expressão SQL do Campo
+        */
+        nFields:=Len(aTmpCustomFields)
+        aHeaderTitle:=array(0)
+        for nField:=1 to nFields
+            aAdd(aHeaderTitle,Array(4))
+            aHeaderTitle[nField][1]:=aTmpCustomFields[nField][1]
+            aHeaderTitle[nField][2]:=aTmpCustomFields[nField][3]
+            aHeaderTitle[nField][3]:=aTmpCustomFields[nField][2][3]
+            if (aHeaderTitle[nField][3]=="N")
+                aHeaderTitle[nField][4]:="__NOTRANSFORM__"
+            else
+                aHeaderTitle[nField][4]:=aTmpCustomFields[nField][4]
+            endif
+        next nField
+
+        nFields:=Len(aHeaderTitle)
+
+        for nField:=1 to nFields
+            nFieldAT:=nField
+            cField:=aHeaderTitle[nFieldAT][1]
+            if (empty(aHeaderTitle[nFieldAT][2]))
+                aHeaderTitle[nFieldAT][2]:=allTrim(GetSX3Cache(cField,"X3_TITULO"))
+            endif
+            if (empty(aHeaderTitle[nFieldAT][3]))
+                aHeaderTitle[nFieldAT][3]:=GetSX3Cache(cField,"X3_TIPO")
+            endif
+            if (aHeaderTitle[nFieldAT][4]!="__NOTRANSFORM__")
+                if empty(aHeaderTitle[nFieldAT][4])
+                    aHeaderTitle[nFieldAT][4]:=GetSX3Cache(cField,"X3_PICTURE")
+                endif
+            endif
+        next nField
+
+        if (!lExcelCSV)
+
+            //see: https://tdn.totvs.com/display/public/framework/FwPrinterXlsx
+            oFWMSExcel:=if(lExcelXlsx,FwMsExcelXlsx():New(),FWMsExcelEx():New())
+            oFWMSExcel:AddworkSheet(cWorkSheet)
+            oFWMSExcel:AddTable(cWBreak,cTBreak)
+
+        else
+
+            nhCSVFile:=fCreate(cFileServer,FC_NORMAL)
+            lExcelReport:=file(cFileServer)
+            if (!lExcelReport)
+                //...Avisa ao usuário
+                ApMsgAlert("Não foi possível criar o arquivo "+cFileServer,cTitle)
+                //... e abandona
+                break
+            endif
+
+        endif
+
+        //Carrega o Cabeçalho da Planilha
+        aHeader:=(cExcelAlias)->(dbStruct())
+        nFields:=Len(aHeader)
+
+        for nField:=1 to nFields
+            cField:=aHeader[nField][DBS_NAME]
+            nFieldAT:=aScan(aHeaderTitle,{|x|x[1]==cField})
+            cFieldType:=if(nFieldAT>0,aHeaderTitle[nFieldAT][3],aHeader[nField][DBS_TYPE])
+            if (empty(cFieldType))
+                cFieldType:=aHeader[nField][DBS_TYPE]
+            endif
+            nAlign:=if(cFieldType=="C",1,if(cFieldType=="N",3,2))
+            //1-General,2-Number,3-Monetario,4-DateTime
+            nFormat:=if(cFieldType=="D",4,if(cFieldType=="N",2,1))
+            cColumn:=if(nFieldAT>0,aHeaderTitle[nFieldAT][2],cField)
+            cColumn:=OemToAnsi(cColumn)
+            lTotal:=(cFieldType=="N")
+            if (!lExcelCSV)
+                oFWMSExcel:AddColumn(@cWBreak,@cTBreak,@cColumn,@nAlign,@nFormat,@lTotal)
+            else
+                cBuffer+=cColumn
+                if (nField<nFields)
+                    cBuffer+=";"
+                endif
+            endif
+        next nField
+
+        if (lExcelCSV)
+           cBuffer+=cCRLF
+           fWrite(nhCSVFile,cBuffer)
+           cBuffer:=""
+        endif
+
+        //Carrega os Detalhes da Planilha
+        while ( (cExcelAlias)->(!eof()) )
+
+            aSize(aCells,0)
+
+            if (cExcelAlias)->(Eval(bExcelDataFilter))
+
+                cBuffer:=""
+
+                for nField := 1 to nFields
+                    uCell:=(cExcelAlias)->(FieldGet(nField))
+                    cField:=aHeader[nField][DBS_NAME]
+                    nFieldAT:=aScan(aHeaderTitle,{|x|x[1]==cField})
+                    cFieldType:=if(nFieldAT>0,aHeaderTitle[nFieldAT][3],aHeader[nField][DBS_TYPE])
+                    if (empty(cFieldType))
+                        cFieldType:=aHeader[nField][DBS_TYPE]
+                    endif
+                    if (cFieldType=="D")
+                        if (cFieldType!=aHeader[nField][DBS_TYPE])
+                            uCell:=SToD(uCell)
+                        endif
+                    endif
+                    cPicture:=if(nFieldAT>0,aHeaderTitle[nFieldAT][4],"")
+                    if (!(empty(cPicture)))
+                        if (!(cPicture=="__NOTRANSFORM__"))
+                            uCell:=allTrim(Transform(uCell,cPicture))
+                        endif
+                    else
+                        if (cFieldType=="D")
+                            uCell:=DToC(uCell)
+                        endif
+                    endif
+                    if (!lExcelCSV)
+                        aAdd(aCells,uCell)
+                    else
+                        if (cFieldType=="N")
+                            cBuffer+=cValToChar(uCell)
+                        else
+                            if ((cFieldType=="C").and.(Val(uCell)>0))
+                                cBuffer+="'"
+                            endif
+                            cBuffer+=uCell
+                        endif
+                        if (nField<nFields)
+                            cBuffer+=";"
+                        endif
+                    endif
+                next nField
+
+                if (!lExcelCSV)
+                    oFWMSExcel:AddRow(@cWBreak,@cTBreak,aClone(aCells))
+                else
+                    cBuffer+=cCRLF
+                    fWrite(nhCSVFile,cBuffer)
+                    cBuffer:=""
+                endif
+            endif
+
+            (cExcelAlias)->(dbSkip())
+
+        end while
+
+        if (!lExcelCSV)
+            oFWMSExcel:Activate()
+            oFWMSExcel:GetXMLFile(cFileServer)
+            oFWMSExcel:DeActivate()
+        else
+            fClose(nhCSVFile)
+        endif
+
+        //Extrai as informações de Diretório
+        splitPath(cFileClient,@cSPPDrive,@cSPPPath,@cSPPFile,@cSPPExt)
+
+        cPathClient:=cSPPDrive
+        cPathClient+=cSPPPath
+
+        cFileServerToClient:=cPathClient
+
+        if (file(cFileClient))
+            fErase(cFileClient)
+        endif
+
+        lExcelReport:=(CpyS2T(cFileServer,cPathClient,.T.).and.(File(cFileClient)))
+
+        if (!lExcelReport)
+            lExcelReport:=(__CopyFile(cFileServer,cFileClient).and.(File(cFileClient)))
+            if (!lExcelReport)
+                ApMsgAlert("Ocorreram Problemas na transferência do arquivo "+cFileServer,"Exportar Excel")
+            endif
+        endif
+
+        if (lExcelReport)
+            //Extrai as informações de Diretório
+            splitPath(cFileServer,@cSPPDrive,@cSPPPath,@cSPPFile,@cSPPExt)
+            cFileServerToClient+=cSPPFile
+            cFileServerToClient+=cSPPExt
+            if (file(cFileClient))
+                fErase(cFileClient)
+            endif
+            lExcelReport:=(fReName(cFileServerToClient,cFileClient)==0)
+            if (!lExcelReport)
+                ApMsgAlert("Ocorreram Problemas na transferência do arquivo "+cFileServer,"Exportar Excel")
+            endif
+        endif
+
+        fErase(cFileServer)
+
+        lExcelReport:=File(cFileClient)
+
+        if (lExcelReport)
+
+            lMsExcel:=ApOleClient("MsExcel")
+            if (lMsExcel)
+                oMsExcel:=MsExcel():New()
+                FWMsgRun(nil,{||oMsExcel:WorkBooks:Open(cFileClient)},"Aguarde...","Carregando Arquivo Local")
+                oMsExcel:SetVisible(.T.)
+                oMsExcel:Destroy()
+                oMsExcel:=FreeObj(oMsExcel)
+            else
+                FWMsgRun(nil,{||ShellExecute("open",cFileClient,"","",SW_SHOWMAXIMIZED)},"Aguarde...","Carregando Arquivo Local")
+            endif
+
+        endif
+
+    end sequence
+
+    FWRestArea(aExcelDetailArea)
+    FWRestArea(aArea)
+
+    FWFreeArray(@aExcelDetailArea)
+    FWFreeArray(@aArea)
+
+return(lExcelReport)
