@@ -58,7 +58,7 @@ Param(
 
     [Parameter()]
     [int]$DetailRow = 2
-    
+
     [Parameter()]
     [string]$Encoding = "ascii"
 )
