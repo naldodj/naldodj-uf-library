@@ -20,6 +20,10 @@
     .PARAMETER DetailRow
     The row number containing the detail data in the Excel Workbook. If not specified, defaults to the second row.
 
+    .PARAMETER Encoding
+    The character encoding to use when outputting the JSON file. If not specified, defaults to 'ascii'.
+    Valid values include 'ascii', 'bigendianunicode', 'bigendianutf32', 'oem', 'unicode', 'utf7', 'utf8', 'utf8BOM', 'utf8NoBOM', 'utf32', and 'default'.
+
     .EXAMPLE
     Excel2JSON -InputFile MyExcelWorkbook.xlsx
 
@@ -54,6 +58,9 @@ Param(
 
     [Parameter()]
     [int]$DetailRow = 2
+    
+    [Parameter()]
+    [string]$Encoding = "ascii"
 )
 
 #region prep
@@ -145,7 +152,7 @@ $excelApplication.Quit()
 [System.Runtime.InteropServices.Marshal]::ReleaseComObject($excelApplication) | Out-Null
 
 # Convert to JSON and output to file
-$data | ConvertTo-Json | Out-File -Encoding ASCII -FilePath $OutputFileName
+$data | ConvertTo-Json | Out-File -Encoding $Encoding -FilePath $OutputFileName
 
 # Garbage collection
 [System.GC]::Collect()
