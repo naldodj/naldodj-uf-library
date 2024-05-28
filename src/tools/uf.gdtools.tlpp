@@ -1,0 +1,177 @@
+/*
+         __                _  _                  _
+ _   _  / _|     __ _   __| || |_   ___    ___  | | ___
+| | | || |_     / _` | / _` || __| / _ \  / _ \ | |/ __|
+| |_| ||  _| _ | (_| || (_| || |_ | (_) || (_) || |\__ \
+ \__,_||_|  (_) \__, | \__,_| \__| \___/  \___/ |_||___/
+                |___/
+
+*/
+
+#include "totvs.ch"
+#include "parmtype.ch"
+
+namespace uf
+using namespace uf
+
+class GDTools
+    /*UF.GD():GDStyle(nStyle as numeric) => Apurar as Opções para MsNewGetDados conforme nStyle*/
+    static method GDStyle(nStyle as numeric) as json
+    /*UF.GD():GDHeaderPos() => Obter o Posicionamento das colunas de aHeader para a GetDados*/
+    static method GDHeaderPos() as json
+    /*UF.GD():GDRstDblClick() => Executa o blDblClick passado como padrâmetro*/
+    static method GDRstDblClick(oMsNewGetDados as object,blDblClick as codeblock) as variant
+    /*UF.GD():GDRstHeaderClick() => Executa o bHeaderClick passado como padrâmetro*/
+    static method GDRstHeaderClick(oMsNewGetDados as object,bHeaderClick as codeblock,oBrw as object,nCol as numeric,aDim as array) as variant
+end class
+
+static method GDStyle(nStyle) class GDTools
+
+    local cBinario as character
+
+    local jGDStyle as json
+
+    local lInsert as logical
+    local lUpdate as logical
+    local lDelete as logical
+
+    local nX as numeric
+    local nByte as numeric
+    local nResto as numeric
+
+    paramtype 1 var nStyle as numeric optional default 0
+
+    cBinario:="00000000"
+    nResto:=nStyle
+    nByte:=8
+
+    while (nResto>=2)
+        nX:=Mod(nResto,2)
+        if (nX==1)
+            cBinario:=subStr(cBinario,1,nByte-1)+"1"+subStr(cBinario,nByte+1)
+        endif
+        nResto:=Int(nResto/2)
+        nByte--
+    end while
+
+    if (nResto==1)
+        cBinario:=subStr(cBinario,1,nByte-1)+"1"+subStr(cBinario,nByte+1)
+    Endif
+
+    lInsert:=(subStr(cBinario,8,1)=="1")
+    lUpdate:=(subStr(cBinario,7,1)=="1")
+    lDelete:=(subStr(cBinario,6,1)=="1")
+
+    jGDStyle:=JSONObject():New()
+    jGDStyle["lInsert"]:=lInsert
+    jGDStyle["lUpdate"]:=lUpdate
+    jGDStyle["lDelete"]:=lDelete
+
+return(jGDStyle)
+
+static method GDHeaderPos() class GDTools
+
+    local jGDHeaderPos:=JSONObject():New() as json
+
+    //Define o Tamanho de Elementos do aHeader
+    jGDHeaderPos["H_ALEN"]:=17
+
+    //Define a Posição dos Elementos de aHeader
+    jGDHeaderPos["H_TITULO"]:=1
+    jGDHeaderPos["H_CAMPO"]:=2
+    jGDHeaderPos["H_PICTURE"]:=3
+    jGDHeaderPos["H_TAMANHO"]:=4
+    jGDHeaderPos["H_DECIMAL"]:=5
+    jGDHeaderPos["H_VALID"]:=6
+    jGDHeaderPos["H_USADO"]:=7
+    jGDHeaderPos["H_TIPO"]:=8
+    jGDHeaderPos["H_F3"]:=9
+    jGDHeaderPos["H_CONTEXT"]:=10
+    jGDHeaderPos["H_CBOX"]:=11
+    jGDHeaderPos["H_RELACAO"]:=12
+    jGDHeaderPos["H_WHEN"]:=13
+    jGDHeaderPos["H_VISUAL"]:=14
+    jGDHeaderPos["H_VLDUSER"]:=15
+    jGDHeaderPos["H_PICTVAR"]:=16
+    jGDHeaderPos["H_OBRIGAT"]:=17
+
+return(jGDHeaderPos)
+
+static method GDRstDblClick(oMsNewGetDados,blDblClick) class GDTools
+
+    local bSvblDblClick as codeblock
+
+    paramtype 1 var oMsNewGetDados as object
+    paramtype 2 var blDblClick as block optional default {||oMsNewGetDados:EditCell()}
+
+    bSvblDblClick:=oMsNewGetDados:oBrowse:blDblClick
+    oMsNewGetDados:oBrowse:blDblClick:=blDblClick
+    Eval(oMsNewGetDados:oBrowse:blDblClick)
+    oMsNewGetDados:oBrowse:blDblClick:=bSvblDblClick
+
+return(nil)
+
+static method GDRstHeaderClick(oMsNewGetDados,bHeaderClick,oBrw,nCol,aDim) class GDTools
+
+    local bSvHeaderClick as codeblock
+
+    paramtype 1 var oMsNewGetDados as object
+    paramtype 2 var bHeaderClick as block optional default {|oBrw,nCol,aDim|.T.}
+    paramtype 3 var oBrw as object optional default oMsNewGetDados:oBrowse
+    paramtype 4 var nCol as numeric optional default oMsNewGetDados:nColPos
+    paramtype 5 var aDim as array optional default array(0)
+
+    bSvHeaderClick:=oMsNewGetDados:oBrowse:bHeaderClick
+    oMsNewGetDados:oBrowse:bHeaderClick:=bHeaderClick
+    GetCellRect(oMsNewGetDados:oBrowse,@aDim)
+    Eval(oMsNewGetDados:oBrowse:bHeaderClick,@oBrw,@nCol,@aDim)
+    oMsNewGetDados:oBrowse:bHeaderClick:=bSvHeaderClick
+
+return(nil)
+
+/*
+               _                      _  _
+  __ _  _   _ | |_   ___    __ _   __| || |__   _ __   ___  __      __ ___   ___
+ / _` || | | || __| / _ \  / _` | / _` || '_ \ | '__| / _ \ \ \ /\ / // __| / _ \
+| (_| || |_| || |_ | (_) || (_| || (_| || |_) || |   | (_) | \ V  V / \__ \|  __/
+ \__,_| \__,_| \__| \___/  \__, | \__,_||_.__/ |_|    \___/   \_/\_/  |___/ \___|
+                           |___/
+*/
+class AutoGDBrowse
+    public method New()
+    public method Refresh()
+    public method GoTop()
+endclass
+
+method New() class AutoGDBrowse
+return(self)
+
+method Refresh() class AutoGDBrowse
+return(self)
+
+method GoTop() class AutoGDBrowse
+return(self)
+
+/*
+               _                      _
+  __ _  _   _ | |_   ___    __ _   __| |
+ / _` || | | || __| / _ \  / _` | / _` |
+| (_| || |_| || |_ | (_) || (_| || (_| |
+ \__,_| \__,_| \__| \___/  \__, | \__,_|
+                           |___/
+*/
+class AutoGD from MsNewGetDados
+	public data nOPC as numeric
+    public method New()
+	public method Enable()
+endclass
+
+method New() class AutoGD
+	::aCols:=array(0)
+    ::aHeader:=array(0)
+	::nAt:=0
+	::oBrowse:=AutoGDBrowse():New()
+return self
+
+method Enable() class AutoGD
+return(.T.)

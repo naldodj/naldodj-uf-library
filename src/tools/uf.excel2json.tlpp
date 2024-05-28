@@ -402,12 +402,12 @@ static method CSVFileToJSON(cExcelFile,cJSONFile,bTmpCustomFields,cExcelPathServ
         oFWFileReader:Open()
         while (oFWFileReader:hasLine())
             cLine:=oFWFileReader:GetLine()
-            aHeader:=StrTokArr2(cLine,cToken,.T.)
+            aHeader:=uf.UFTools():StrTokArray(cLine,cToken)
             nNames:=Len(aHeader)
             while (oFWFileReader:hasLine())
                 jDet:=JSONObject():New()
                 cLine:=oFWFileReader:GetLine()
-                aDetail:=StrTokArr2(cLine,cToken,.T.)
+                aDetail:=uf.UFTools():StrTokArray(cLine,cToken)
                 for nName:=1 to nNames
                     cName:=aHeader[nName]
                     xValue:=aDetail[nName]

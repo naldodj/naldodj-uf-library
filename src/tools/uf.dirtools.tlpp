@@ -64,7 +64,7 @@ static method MakeFileDir(cDirMake) class dirtools
     cFullPath:=cDrive
     cFullPath+=cPath
 
-    aDirs:=StrTokArr2(cFullPath,"\")
+    aDirs:=uf.UFTools():StrTokArray(cFullPath,"\")
     nAttempts:=Len(aDirs)
 
     lIsDir:=UF.DirMake(cFullPath,@cDrive,@cPath,@cFile,@cExt)
@@ -152,7 +152,7 @@ static function DirMake(cDirMake as character,cDrive as character,cPath as chara
 
     if (!lIsDir)
 
-        aDirectory:=StrTokArr2(cDirMake,"\")
+        aDirectory:=uf.UFTools():StrTokArray(cDirMake,"\")
 
         cTDirectory:=""
 
@@ -199,7 +199,7 @@ static function RemoveDir(cRootDir,cRemoveDir as character,cDrive as character,c
 
     if (!lRemoveDir)
 
-        aDirectory:=StrTokArr2(cRootDir,"\")
+        aDirectory:=uf.UFTools():StrTokArray(cRootDir,"\")
 
         cTDirectory:=""
 

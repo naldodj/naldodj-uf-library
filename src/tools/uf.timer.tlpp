@@ -14,14 +14,16 @@
 namespace uf
 using namespace uf
 
-static __oUFTTimer as object
+static __oHMTTimer:=tHashMap():New() as object
 
 class Timer
 
     static method TimerSleep(nSleep as numeric,nWaits as numeric,bConfirmWait as codeblock) as logical
 
-    static method Activate(nInterval as numeric,bAction as codeblock,oDlg as object) as object
-    static method DeActivate() as logical
+    static method Activate(nInterval as numeric,bAction as codeblock,oDlg as object,cID as character) as object
+    static method DeActivate(cID as character) as logical
+    static method DeActivateAll() as logical
+    static method Clean() as logical
 
 end class
 
@@ -46,39 +48,111 @@ static method TimerSleep(nSleep,nWaits,bConfirmWait) class timer
 
 return(lConfirmWait)
 
-static method Activate(nInterval,bAction,oDlg) class Timer
+static method Activate(nInterval,bAction,oDlg,cID) class Timer
 
-    local lUFTTimer as logical
+    local lTTimer as logical
+
+    local oTTimer as object
 
     paramtype 1 var nInterval as numeric optional default 1000
-    paramtype 2 var bAction as block optional default {||if((Type("__oUFTTimer")!="O"),.F.,Timer():DeActivate())}
+    paramtype 2 var bAction as block optional default {||.T.}
     paramtype 3 var oDlg as object optional default GetWndDefault()
+    paramtype 4 var cID as character optional default UUIDRandom()
 
-    lUFTTimer:=(Type("__oUFTTimer")=="O")
-    if (!lUFTTimer)
-        __oUFTTimer:=TTimer():New(nInterval,bAction,oDlg)
+    lTTimer:=((valType(__oHMTTimer)=="O").and.(__oHMTTimer:Get(cID,@oTTimer)).and.(ValType(oTTimer)=="O"))
+    if (!lTTimer)
+        oTTimer:=TTimer():New(nInterval,bAction,oDlg)
+        if (valType(__oHMTTimer)!="O")
+            __oHMTTimer:=tHashMap():New()
+        endif
+        __oHMTTimer:Set(cID,oTTimer)
     endif
 
-    if (lUFTTimer)
-        __oUFTTimer:DeActivate()
+    if (lTTimer)
+        oTTimer:DeActivate()
     endif
 
-    __oUFTTimer:bAction:=bAction
+    oTTimer:bAction:=bAction
 
-    __oUFTTimer:Activate()
+    oTTimer:Activate()
 
-return(__oUFTTimer)
+return(oTTimer)
 
-static method DeActivate() class Timer
+static method DeActivate(cID) class Timer
 
-    local lUFTTimer as logical
+    local lTTimer as logical
 
-    lUFTTimer:=(Type("__oUFTTimer")=="O")
-    if (lUFTTimer)
-        __oUFTTimer:DeActivate()
-        FreeObj(@__oUFTTimer)
-        DelClassIntF()
-        lUFTTimer:=(Type("__oUFTTimer")=="O")
+    local oTTimer as object
+
+    paramtype cID as character
+
+    lTTimer:=(valType(__oHMTTimer)=="O")
+    if (lTTimer)
+        lTTimer:=((__oHMTTimer:Get(cID,@oTTimer)).and.(ValType(oTTimer)=="O"))
+        if (lTTimer)
+            oTTimer:DeActivate()
+        endif
     endif
 
-return(lUFTTimer)
+return(lTTimer)
+
+static method DeActivateAll() class Timer
+
+    local aTTimers as array
+
+    local cID as character
+
+    local lTTimer:=.T. as logical
+
+    local nTTime,nTTimers as numeric
+
+    lTTimer:=(valType(__oHMTTimer)=="O")
+
+    if (lTTimer)
+
+        __oHMTTimer:List(@aTTimers)
+
+        nTTimers:=Len(aTTimers)
+        for nTTime:=1 to nTTimers
+            cID:=aTTimers[nTTime][1]
+            lTTimer:=((lTTimer).and.(Timer():DeActivate(cID)))
+        next nTTime
+
+    endif
+
+return(lTTimer)
+
+static method Clean() class Timer
+
+    local aTTimers as array
+
+    local cID as character
+
+    local lTTimer:=.T. as logical
+
+    local nTTime,nTTimers as numeric
+
+    local oTTimer as object
+
+    lTTimer:=(valType(__oHMTTimer)=="O")
+
+    if (lTTimer)
+
+        __oHMTTimer:List(@aTTimers)
+
+        nTTimers:=Len(aTTimers)
+        for nTTime:=1 to nTTimers
+            cID:=aTTimers[nTTime][1]
+            oTTimer:=aTTimers[nTTime][2]
+            Timer():DeActivate(cID)
+            FreeObj(@oTTimer)
+            __oHMTTimer:Del(cID)
+        next nTTime
+
+        __oHMTTimer:Clean()
+
+    endif
+
+    DelClassIntF()
+
+return(lTTimer)

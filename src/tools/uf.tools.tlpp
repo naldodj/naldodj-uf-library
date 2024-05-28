@@ -15,6 +15,7 @@ using namespace uf
 class UFTools
     static method RetPictVal(nVal as numeric,lDecZero as logical,nInt as numeric,nDec as numeric,lPictSepMil as logical) as character
     static method TextRuler(cText as character,lStep10 as logical) as character
+    static method StrTokArray(cString as character,cToken as character,bEvalToken as codeblock) as array
 end class
 
 static method RetPictVal(nVal,lDecZero,nInt,nDec,lPictSepMil) class UFTools
@@ -111,3 +112,48 @@ static method TextRuler(cText,lStep10) class UFTools
     cTextRuler:=Left(cTextRuler,nStr)
 
 return(cTextRuler)
+
+static method StrTokArray(cString,cToken,bEvalToken) class UFTools
+
+    local aStrTokArr:=array(0) as array
+
+    local cStr as character
+
+    local lAdd:=.T. as logical
+    local lbEvalToken as logical
+
+    local nATToken as numeric
+    local nRealSize as numeric
+
+    paramtype 1 var cString as character
+    paramtype 2 var cToken as character optional default "+"
+    paramtype 3 var bEvalToken as block optional
+
+    lbEvalToken:=(valType(lbEvalToken)=="B")
+
+    nRealSize:=Len(cToken)
+    while ((nATToken:=AT(cToken,cString))>0)
+        cStr:=Left(cString,(nATToken-1))
+        if (lbEvalToken)
+            lAdd:=eval(bEvalToken,@cStr)
+        endif
+        if (lAdd)
+            aAdd(aStrTokArr,cStr)
+        endif
+        cString:=subStr(cString,(nATToken+nRealSize))
+    end while
+
+    if (Len(cString)>0)
+        cStr:=cString
+        cString:=""
+        if (lbEvalToken)
+            lAdd:=eval(bEvalToken,@cStr)
+        endif
+        if (lAdd)
+            aAdd(aStrTokArr,cStr)
+        endif
+    endif
+
+    cStr:=""
+
+return(aStrTokArr)
