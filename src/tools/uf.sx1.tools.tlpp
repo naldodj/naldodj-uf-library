@@ -78,6 +78,7 @@ static method SetMVParFromArray(aParameters,cPerg,lUpdateSX1) class SX1Tools
             bErrorBlock:=ErrorBlock({|e|break(e)})
             begin sequence
                 &(cMvPar):=aParameters[nParameter]
+                SetMVValue(cPerg,cMvPar,aParameters[nParameter])
             recover
                 lError:=.T.
             end sequence
@@ -158,6 +159,7 @@ static method SetMVParFromHashMap(oHMParameters,cPerg,lUpdateSX1) class SX1Tools
             bErrorBlock:=ErrorBlock({|e|break(e)})
             begin sequence
                 &(cMvPar):=xHValue
+                SetMVValue(cPerg,cMvPar,xHValue)
             recover
                 lError:=.T.
             end sequence
