@@ -1,0 +1,281 @@
+/*
+
+         __                _     _                  _
+ _   _  / _|    ___ __  __/ |   | |_   ___    ___  | | ___
+| | | || |_    / __|\ \/ /| |   | __| / _ \  / _ \ | |/ __|
+| |_| ||  _| _ \__ \ >  < | | _ | |_ | (_) || (_) || |\__ \
+ \__,_||_|  (_)|___//_/\_\|_|(_) \__| \___/  \___/ |_||___/
+
+*/
+
+#include "totvs.ch"
+#include "parmtype.ch"
+
+namespace uf
+
+class SX1Tools
+
+    static method SetMVParFromArray(aParameters as array,cPerg as character,lUpdateSX1 as logical) as logical
+    static method SetMVParFromHashMap(oHMParameters as object,cPerg as character,lUpdateSX1 as logical) as logical
+
+    static method BuildSX1Parameters(cPerg as character,uParameters as variant) as array
+    static method SaveMVParIntoSX1(cPerg as character,aSX1Parameters as array) as variant
+
+end class
+
+static method SetMVParFromArray(aParameters,cPerg,lUpdateSX1) class SX1Tools
+
+    local aSX1Parameters as array
+
+    local cMvPar:="MV_PAR00" as character
+
+    local bErrorBlock as codeblock
+
+    local lSet:=.F. as logical
+    local lPerg as logical
+    local lError:=.F. as logical
+
+    local nParameter as numeric
+    local nParameters as numeric
+
+    local xValue as variant
+
+    paramtype 1 var aParameters as array optional default Array(0)
+    paramtype 2 var cPerg as character optional default ""
+    paramtype 3 var lUpdateSX1 as logical optional default .T.
+
+    begin sequence
+
+        lPerg:=(!empty(cPerg))
+        if (lPerg)
+            lPerg:=Pergunte(cPerg,.F.)
+            if (!lPerg)
+                lError:=.T.
+                break
+            endif
+        endif
+
+        nParameters:=Len(aParameters)
+
+        for nParameter:=1 To nParameters
+            cMvPar:=__Soma1(cMvPar)
+            if (lPerg)
+                bErrorBlock:=ErrorBlock({|e|break(e)})
+                begin sequence
+                    xValue:=&(cMvPar)
+                recover
+                    lError:=.T.
+                end sequence
+                ErrorBlock(bErrorBlock)
+                if (lError)
+                    exit
+                endif
+                lError:=(valtype(xValue)!=valtype(aParameters[nParameter]))
+                if (lError)
+                    exit
+                endif
+            endif
+            bErrorBlock:=ErrorBlock({|e|break(e)})
+            begin sequence
+                &(cMvPar):=aParameters[nParameter]
+            recover
+                lError:=.T.
+            end sequence
+            ErrorBlock(bErrorBlock)
+            if (lError)
+                exit
+            endif
+        next nParameter
+
+    end sequence
+
+    lSet:=(!lError)
+
+    if ((lSet).and.(lUpdateSX1))
+        aSX1Parameters:=SX1Tools():BuildSX1Parameters(@cPerg,@aParameters)
+        SX1Tools():SaveMVParIntoSX1(@cPerg,@aSX1Parameters)
+        FWFreeArray(@aSX1Parameters)
+    endif
+
+return(lSet)
+
+static method SetMVParFromHashMap(oHMParameters,cPerg,lUpdateSX1) class SX1Tools
+
+    local aParameters as array
+    local aSX1Parameters as array
+
+    local cMvPar as character
+
+    local bErrorBlock as codeblock
+
+    local lSet:=.F. as logical
+    local lPerg as logical
+    local lError:=.F. as logical
+
+    local nParameter as numeric
+    local nParameters as numeric
+
+    local xPValue as variant
+    local xHValue as variant
+
+    paramtype 1 var oHMParameters as object /*class THASHMAP */
+    paramtype 2 var cPerg as character optional default ""
+    paramtype 3 var lUpdateSX1 as logical optional default .T.
+
+    begin sequence
+
+        lPerg:=(!empty(cPerg))
+        if (lPerg)
+            lPerg:=Pergunte(cPerg,.F.)
+            if (!lPerg)
+                lError:=.T.
+                break
+            endif
+        endif
+
+        oHMParameters:List(@aParameters)
+        nParameters:=Len(aParameters)
+
+        for nParameter:=1 To nParameters
+            cMvPar:=aParameters[nParameter][1]
+            if (lPerg)
+                bErrorBlock:=ErrorBlock({|e|break(e)})
+                begin sequence
+                    xPValue:=&(cMvPar)
+                recover
+                    lError:=.T.
+                end sequence
+                ErrorBlock(bErrorBlock)
+                if (lError)
+                    exit
+                endif
+                xHValue:=aParameters[nParameter][2]
+                lError:=(valtype(xPValue)!=valtype(xHValue))
+                if (lError)
+                    exit
+                endif
+            endif
+            bErrorBlock:=ErrorBlock({|e|break(e)})
+            begin sequence
+                &(cMvPar):=xHValue
+            recover
+                lError:=.T.
+            end sequence
+            ErrorBlock(bErrorBlock)
+            if (lError)
+                exit
+            endif
+        next nParameter
+
+    end sequence
+
+    lSet:=(!lError)
+
+    if ((lSet).and.(lUpdateSX1))
+        aSX1Parameters:=SX1Tools():BuildSX1Parameters(@cPerg,@oHMParameters)
+        SX1Tools():SaveMVParIntoSX1(@cPerg,@aSX1Parameters)
+        FWFreeArray(@aSX1Parameters)
+    endif
+
+    FWFreeArray(@aParameters)
+
+return(lSet)
+
+static method BuildSX1Parameters(cPerg,uParameters) class SX1Tools
+
+    local aHMList as array
+    local aParameters:=Array(0) as array
+    local aSX1Template:=Array(0) as array
+    local aSX1Parameters:=Array(0) as array
+
+    local lParamType2IsObject as logical
+
+    local nParameter,nParameters,nSX1Template as numeric
+
+    paramtype 1 var cPerg as character
+    paramtype 2 var uParameters as array,object /*class THASHMAP */
+
+    lParamType2IsObject:=(ValType(uParameters)=="O")
+    if (lParamType2IsObject)
+        if (oHMParameters:List(@aHMList))
+            nParameters:=Len(aHMList)
+            for nParameter:=1 to nParameters
+                aAdd(aParameters,aHMList[nParameter][2])
+            next nParameter
+        endif
+    else
+        aParameters:=aClone(uParameters)
+    endif
+
+    cPerg:=PadR(cPerg,Len(SX1->X1_GRUPO))
+    SX1->(dbSetOrder(1))
+    if (SX1->(dbSeek(cPerg,.F.)))
+        while SX1->(!eof().and.X1_GRUPO==cPerg)
+            SX1->(;
+                aAdd(;
+                    aSX1Template,;
+                    {;
+                        X1Pergunt();//01
+                        ,X1_TIPO;//02
+                        ,if(X1_TIPO=="R",255,X1_TAMANHO);//03
+                        ,X1_DECIMAL;//04
+                        ,if(X1_PRESEL==0,1,X1_PRESEL);//05
+                        ,X1_GSC;//06
+                        ,X1_VALID;//07
+                        ,X1_CNT01;//08
+                        ,if(X1_GSC=="E",X1_DEF01,AllTrim(X1Def01()));//09
+                        ,AllTrim(X1Def02());//10
+                        ,AllTrim(X1Def03());//11
+                        ,AllTrim(X1Def04());//12
+                        ,AllTrim(X1Def05());//13
+                        ,X1_VAR01;//14
+                        ,if(X1_PRESEL==0,1,X1_PRESEL);//15
+                        ,X1_F3;//16
+                        ,X1_PICTURE;//17
+                        ,;//18
+                        ,{||.T.},;//19
+                        X1_CNT02;//20
+                    };
+                );
+            )
+            SX1->(dbSkip())
+        end while
+    endif
+
+    nSX1Template:=Len(aSX1Template)
+
+    nParameters:=Len(aParameters)
+    for nParameter:=1 to Min(nSX1Template,nParameters)
+        if (aSX1Template[nParameter][06]=="G") /*Get*/
+            aSX1Template[nParameter][08]:=aParameters[nParameter]
+        elseif (aSX1Template[nParameter][06]=="C") /*Choice*/
+            aSX1Template[nParameter][05]:=aParameters[nParameter]
+        endif
+        aAdd(aSX1Parameters,aClone(aSX1Template[nParameter]))
+    next nParameter
+
+    FWFreeArray(@aParameters)
+    FWFreeArray(@aSX1Template)
+
+return(aSX1Parameters)
+
+static method SaveMVParIntoSX1(cPerg,aSX1Parameters) class SX1Tools
+
+    local lSaveMVVars as logical
+
+    local nSetUpdPerg as numeric
+
+    paramtype 1 var cPerg as character
+    paramtype 2 var aSX1Parameters as array
+
+    lSaveMVVars:=SaveMVVars(.T.)
+    nSetUpdPerg:=GetUpdPerg()
+
+    SetUpdPerg(1)
+
+    __SaveParam(cPerg,aSX1Parameters)
+
+    SetUpdPerg(nSetUpdPerg)
+    SaveMVVars(lSaveMVVars)
+
+return(nil)
