@@ -199,7 +199,7 @@ static method BuildSX1Parameters(cPerg,uParameters) class SX1Tools
 
     lParamType2IsObject:=(ValType(uParameters)=="O")
     if (lParamType2IsObject)
-        if (oHMParameters:List(@aHMList))
+        if (uParameters:List(@aHMList))
             nParameters:=Len(aHMList)
             for nParameter:=1 to nParameters
                 aAdd(aParameters,aHMList[nParameter][2])
