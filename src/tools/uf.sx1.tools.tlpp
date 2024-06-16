@@ -12,6 +12,7 @@
 #include "parmtype.ch"
 
 namespace uf
+using namespace uf
 
 class SX1Tools
 
