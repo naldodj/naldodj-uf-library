@@ -16,22 +16,41 @@ using namespace uf
 
 class SQL
 
-    static method SQLFormat(cQuery as character) as character
+    static method SQLFormat(cQuery as character,jParameters as json) as character
 
 end class
 
-static method SQLFormat(cQuery) class SQL
+static method SQLFormat(cQuery,jParameters) class SQL
 
     local cSQLFormat as character
+
+    local cHTTPParameter as character
+    local cHTTPParameters:="" as character
 
     local jSQLFormat as json
 
     paramtype 1 var cQuery as character
+    paramtype 2 var jParameters as json optional default JSONObject():New()
+
+    cHTTPParameter:="reindent"
+    cHTTPParameters+=cHTTPParameter+"="+dfv():DefaultEmpty(@jParameters[cHTTPParameter],"1")
+    cHTTPParameters+="&"
+
+    cHTTPParameter:="identifier_case"
+    cHTTPParameters+=cHTTPParameter+"="+dfv():DefaultEmpty(@jParameters[cHTTPParameter],"upper")
+    cHTTPParameters+="&"
+
+    cHTTPParameter:="keyword_case"
+    cHTTPParameters+=cHTTPParameter+"="+dfv():DefaultEmpty(@jParameters[cHTTPParameter],"upper")
+    cHTTPParameters+="&"
+
+    cHTTPParameter:="keyword_case"
+    cHTTPParameters+=cHTTPParameter+"="+dfv():DefaultEmpty(@jParameters[cHTTPParameter],"4")
 
     cSQLFormat:=cQuery
     cSQLFormat:=strTran(strTran(cSQLFormat,chr(13)," "),chr(10)," ")
     cSQLFormat:=URL():Encode(cSQLFormat)
-    cSQLFormat:=HttpPost("https://sqlformat.org/api/v1/format","","reindent=1&identifier_case=upper&keyword_case=upper&indent_width=4&sql="+cSQLFormat)
+    cSQLFormat:=HttpPost("https://sqlformat.org/api/v1/format","",cHTTPParameters+"&sql="+cSQLFormat)
     jSQLFormat:=JSONObject():New()
     if ((empty(jSQLFormat:fromJSON(cSQLFormat))).and.(jSQLFormat:HasProperty("result")))
         cSQLFormat:=jSQLFormat["result"]
