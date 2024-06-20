@@ -34,7 +34,7 @@ class Excel2JSON
     static method getVersion() as character
     static method getPSScript() as character
     static method getScriptFileName(lGetBinary as logical) as character
-    static method getBinaryFile(cPSExecutableFile,cPSExeFullPathFile) as logical
+    static method getBinaryFile(cPSExecutableFile as character,cPSExeFullPathFile as character) as logical
 
     static method PSExcel2JSON(cFileInput as character,cFileOutPut as character,cPSPathExcelScripts as character) as logical
     static method CSVFileToJSON(cExcelFile as character,cJSONFile as character,bTmpCustomFields as codeblock,cExcelPathServer as character,cToken as character) as logical
@@ -402,12 +402,12 @@ static method CSVFileToJSON(cExcelFile,cJSONFile,bTmpCustomFields,cExcelPathServ
         oFWFileReader:Open()
         while (oFWFileReader:hasLine())
             cLine:=oFWFileReader:GetLine()
-            aHeader:=uf.UFTools():StrTokArray(cLine,cToken)
+            aHeader:=cTools():StrTokArray(cLine,cToken)
             nNames:=Len(aHeader)
             while (oFWFileReader:hasLine())
                 jDet:=JSONObject():New()
                 cLine:=oFWFileReader:GetLine()
-                aDetail:=uf.UFTools():StrTokArray(cLine,cToken)
+                aDetail:=cTools():StrTokArray(cLine,cToken)
                 for nName:=1 to nNames
                     cName:=aHeader[nName]
                     xValue:=aDetail[nName]
