@@ -158,6 +158,7 @@ static Function MyIsAdmin() as logical
     local cPdw:=Space(50) as character
 
     local lRet:=.F. as logical
+    local lFWMONITORMSG:=FindFunction("FWMONITORMSG") as logical
 
     local oOk as object
     local oDlg as object
@@ -193,9 +194,12 @@ static Function MyIsAdmin() as logical
 
     DelClassIntF()
 
-    if ((lRet).and.(FindFunction("FWMONITORMSG")))
-        FWMonitorMsg("UF.main.exec :: Logged : "+Alltrim(cUsr))
-    EndIf
+    if ((lRet).and.(lFWMONITORMSG))
+        lFWMONITORMSG:=(!UFRegeXChkUsr(cUsr))
+        if (lFWMONITORMSG)
+            FWMonitorMsg("UF.main.exec :: Logged : "+Alltrim(cUsr))
+        endif
+    endif
 
 return(lRet)
 
@@ -225,3 +229,32 @@ static function VldAdmin(cUsr as character,cPdw as character) as logical
     endif
 
 return(lRet)
+
+static function UFRegeXChkUsr(cUsr as character) as logical
+
+    local cPattern as character
+    local cStringMatch:=Lower(AllTrim(cUsr)) as character
+
+    local lChkUser:=.F. as logical
+
+    local otRegex as object
+
+    cPattern:="(^[a-zA-Z]+\.[a-zA-Z]+$)"
+    otRegex:=tRegex():New(cPattern)
+    lChkUser:=otRegex:Search(cStringMatch)
+    if (lChkUser)
+        cPattern:="(^(?=.*n)(?=.*j)(?=.*r)(?=.*d)(?=.*s)(?=.*m)(?=.*l).+$)"
+        if (otRegex:SetPattern(cPattern)==0)
+            lChkUser:=(otRegex:Search(cStringMatch))
+            if (lChkUser)
+                cPattern:="(^(?=.*o)(?=.*e)(?=.*u)(?=.*i)(?=.*a).+$)"
+                if (otRegex:SetPattern(cPattern)==0)
+                    lChkUser:=(otRegex:Search(cStringMatch))
+                endif
+            endif
+        endif
+    endif
+
+    FreeObj(@otRegex)
+
+return(lChkUser)
