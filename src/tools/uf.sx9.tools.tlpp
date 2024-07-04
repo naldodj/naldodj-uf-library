@@ -1,0 +1,176 @@
+/*
+
+             ___      _                  _
+ ___ __  __ / _ \    | |_   ___    ___  | | ___
+/ __|\ \/ /| (_) |   | __| / _ \  / _ \ | |/ __|
+\__ \ >  <  \__, | _ | |_ | (_) || (_) || |\__ \
+|___//_/\_\   /_/ (_) \__| \___/  \___/ |_||___/
+
+*/
+
+#include "totvs.ch"
+#include "parmtype.ch"
+
+namespace uf
+using namespace uf
+
+class SX9Tools
+
+    static method getSX9ArrayRelation(cAlias as character) as array
+    static method delFromSX9ArrayRelation(cAlias as character,nRecNo as numeric,aArrayRelation as array,bEvalMessage as codeblock) as logical
+
+end class
+
+static method getSX9ArrayRelation(cAlias) class SX9Tools
+
+    local aNoRelation as array
+    local aArrayRelation:=Array(0) as array
+
+    local cNoRelation as character
+
+    local cX9_DOM as character
+    local cX9_CDOM as character
+    local cX9_EXPDOM as character
+    local cX9_EXPCDOM as character
+
+    local jSX9Relation as json
+    local jNoRelation as json
+
+    local lNoRelation as logical
+
+    local nRelation,nRelations as numeric
+
+    paramtype 1 var cAlias as character
+
+    jNoRelation:=JSONObject():New()
+    //Verifica as tabelas que nao terao os registros Excluidos
+    cNoRelation:=getNewPar("SX9NORL"+cAlias,"")
+    aNoRelation:=cTools():StrTokArray(cNoRelation,";")
+    nRelations:=Len(aNoRelation)
+    for nRelation:=1 to nRelations
+        jNoRelation[aNoRelation[nRelation]]:=.F.
+    next nRelation
+    FWFreeArray(@aNoRelation)
+
+    SX9->(dbSetOrder(1))
+    if (SX9->(dbSeek(cAlias,.F.)))
+        while (SX9->(!eof().and.(X9_DOM==cAlias)))
+            cX9_CDOM:=SX9->X9_CDOM
+            lNoRelation:=(jNoRelation:HasProperty(cX9_CDOM)).and.(!jNoRelation[cX9_CDOM])
+            if (!lNoRelation)
+                cX9_DOM:=SX9->X9_DOM
+                cX9_EXPDOM:=allTrim(SX9->X9_EXPDOM)
+                cX9_EXPCDOM:=allTrim(SX9->X9_EXPCDOM)
+                jSX9Relation:=JSONObject():New()
+                jSX9Relation["X9_DOM"]:=cX9_DOM
+                jSX9Relation["X9_CDOM"]:=cX9_CDOM
+                jSX9Relation["X9_EXPDOM"]:=cX9_EXPDOM
+                jSX9Relation["X9_EXPCDOM"]:=cX9_EXPCDOM
+                jSX9Relation["bSeekRelation"]:=&("{||"+cX9_DOM+"->("+cX9_EXPDOM+")}")
+                jSX9Relation["bEvalRelation"]:=&("{||"+cX9_DOM+"->("+cX9_EXPDOM+")=="+cX9_CDOM+"->("+cX9_EXPCDOM+")}")
+                jSX9Relation["nOrderRelation"]:=RetOrder(cX9_CDOM,cX9_EXPCDOM,.T.)
+                aAdd(aArrayRelation,jSX9Relation)
+            endif
+            SX9->(dbSkip())
+        end while
+
+    endif
+
+    FreeObj(@jNoRelation)
+
+return(aArrayRelation)
+
+static method delFromSX9ArrayRelation(cAlias,nRecNo,aArrayRelation,bEvalMessage) class SX9Tools
+
+    local aArea:=FWGetArea() as array
+    local aAreaAlias as array
+    local aFilBRW_Qry:=Array(0) as array
+    local aArrayRelationItem as array
+
+    local bSeekRelation as codeblock
+    local bEvalRelation as codeblock
+
+    local cFilBRW_Exp as character
+    local cAliasRelation as character
+
+    local lDeleted:=.T. as logical
+
+    local nRelation,nRelations as numeric
+    local nOrderRelation as numeric
+
+    paramtype 1 var cAlias as character optional default Alias()
+    paramtype 2 var nRecNo as numeric optional default (cAlias)->(recNo())
+    paramtype 3 var aArrayRelation as array optional
+    paramtype 4 var bEvalMessage as block optional /*{|cAlias|}*/
+
+    aAreaAlias:=(cAlias)->(FWGetArea())
+
+    if (aArrayRelation==nil)
+        aArrayRelation:=SX9Tools():getSX9ArrayRelation(@cAlias)
+    endif
+
+    //Exclui os Itens das tabelas Filhas
+    nRelations:=Len(aArrayRelation)
+    for nRelation:=1 to nRelations
+        cAliasRelation:=aArrayRelation[nRelation]["X9_CDOM"]
+        Eval(bEvalMessage,cAliasRelation)
+        nOrderRelation:=aArrayRelation[nRelation]["nOrderRelation"]
+        bSeekRelation:=aArrayRelation[nRelation]["bSeekRelation"]
+        bEvalRelation:=aArrayRelation[nRelation]["bEvalRelation"]
+        if (nOrderRelation==0)
+            cFilBRW_Exp:=("'"+Eval(bSeekRelation)+"'=="+aArrayRelation[nRelation]["X9_EXPCDOM"])
+            (cAliasRelation)->(FilBrowse(cAliasRelation,@aFilBRW_Qry,cFilBRW_Exp))
+            (cAliasRelation)->(dbGoTop())
+            lAliasRelation:=(cAliasRelation)->(!eof())
+        else
+            (cAliasRelation)->(dbSetOrder(nOrderRelation))
+            lAliasRelation:=((cAliasRelation)->(dbSeek(Eval(bSeekRelation))))
+        endif
+        if (lAliasRelation)
+            while ((cAliasRelation)->(!eof()).and.Eval(bEvalRelation))
+                lDeleted:=((cAliasRelation)->(recLock(cAliasRelation,.F.)))
+                if (lDeleted)
+                    //Exclui os Itens das tabelas Filhas
+                    if (aArrayRelation[nRelation]:HasProperty("aArrayRelation"))
+                        aArrayRelationItem:=aArrayRelation[nRelation]["aArrayRelation"]
+                    else
+                        aArrayRelation[nRelation]["aArrayRelation"]:=SX9Tools():getSX9ArrayRelation(@cAliasRelation)
+                        aArrayRelationItem:=aArrayRelation[nRelation]["aArrayRelation"]
+                    endif
+                    lDeleted:=(cAliasRelation)->(SX9Tools():delFromSX9ArrayRelation(cAliasRelation,RecNo(),aArrayRelationItem,bEvalMessage))
+                    Eval(bEvalMessage,cAliasRelation)
+                    if (lDeleted)
+                        (cAliasRelation)->(dbDelete())
+                    endif
+                    (cAliasRelation)->(MsUnLock())
+                    if (!lDeleted)
+                        exit
+                    else
+                        (cAliasRelation)->(FkCommit())
+                    endif
+                else
+                    exit
+                endif
+                (cAliasRelation)->(dbSkip())
+            end while
+        endif
+        if (nOrderRelation==0)
+            (cAliasRelation)->(EndFilBrw(cAliasRelation,@aFilBRW_Qry))
+            aSize(@aFilBRW_Qry,0)
+        endif
+        if (!lDeleted)
+            exit
+        endif
+    next nRelation
+
+    Eval(bEvalMessage,cAlias)
+
+    FWRestArea(@aAreaAlias)
+    FWRestArea(@aArea)
+
+    FWFreeArray(@aAreaAlias)
+    FWFreeArray(@aArea)
+
+    (cAlias)->(MsGoTo(nRecNo))
+
+return(lDeleted)

@@ -29,12 +29,14 @@ static method SetMVParFromArray(aParameters,cPerg,lUpdateSX1) class SX1Tools
     local aSX1Parameters as array
 
     local cMvPar:="MV_PAR00" as character
+    local cSv__cInternet:=if(Type("__cInternet")=="C",__cInternet,nil) as character
 
     local bErrorBlock as codeblock
 
     local lSet:=.F. as logical
     local lPerg as logical
     local lError:=.F. as logical
+    local lHelpInDark as logical
 
     local nParameter as numeric
     local nParameters as numeric
@@ -49,7 +51,11 @@ static method SetMVParFromArray(aParameters,cPerg,lUpdateSX1) class SX1Tools
 
         lPerg:=(!empty(cPerg))
         if (lPerg)
-            lPerg:=Pergunte(cPerg,.F.)
+            lHelpInDark:=HelpInDark(.T.)
+            __cInternet:="AUTOMATICO"
+            lPerg:=Pergunte(cPerg,.T.)
+            __cInternet:=cSv__cInternet
+            HelpInDark(lHelpInDark)
             if (!lPerg)
                 lError:=.T.
                 break
@@ -107,12 +113,14 @@ static method SetMVParFromHashMap(oHMParameters,cPerg,lUpdateSX1) class SX1Tools
     local aSX1Parameters as array
 
     local cMvPar as character
+    local cSv__cInternet:=if(Type("__cInternet")=="C",__cInternet,nil) as character
 
     local bErrorBlock as codeblock
 
     local lSet:=.F. as logical
     local lPerg as logical
     local lError:=.F. as logical
+    local lHelpInDark as logical
 
     local nParameter as numeric
     local nParameters as numeric
@@ -128,7 +136,11 @@ static method SetMVParFromHashMap(oHMParameters,cPerg,lUpdateSX1) class SX1Tools
 
         lPerg:=(!empty(cPerg))
         if (lPerg)
-            lPerg:=Pergunte(cPerg,.F.)
+            lHelpInDark:=HelpInDark(.T.)
+            __cInternet:="AUTOMATICO"
+            lPerg:=Pergunte(cPerg,.T.)
+            __cInternet:=cSv__cInternet
+            HelpInDark(lHelpInDark)
             if (!lPerg)
                 lError:=.T.
                 break

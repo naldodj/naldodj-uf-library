@@ -1,0 +1,22 @@
+/*----------------------------------------------------------------------
+       _                  _
+  ___ | |_   ___    ___  | | ___
+ / __|| __| / _ \  / _ \ | |/ __|
+| (__ | |_ | (_) || (_) || |\__ \
+ \___| \__| \___/  \___/ |_||___/
+
+*/
+
+#include "totvs.ch"
+
+namespace uf
+using namespace uf
+
+class ctools
+
+    static method StrTokArray(cString as character,cToken as character,bEvalToken as codeblock) as array
+
+end class
+
+static method StrTokArray(cString,cToken,bEvalToken) class ctools
+return(UFTools():StrTokArray(@cString,@cToken,@bEvalToken))
