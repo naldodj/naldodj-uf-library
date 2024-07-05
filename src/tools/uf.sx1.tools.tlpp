@@ -147,7 +147,12 @@ static method SetMVParFromHashMap(oHMParameters,cPerg,lUpdateSX1) class SX1Tools
             endif
         endif
 
-        oHMParameters:List(@aParameters)
+        lPerg:=oHMParameters:List(@aParameters)
+        if (!lPerg)
+            break
+        endif
+
+        aSort(@aParameters,nil,nil,{|x,y|x[1]<y[1]})
         nParameters:=Len(aParameters)
 
         for nParameter:=1 To nParameters
@@ -191,8 +196,6 @@ static method SetMVParFromHashMap(oHMParameters,cPerg,lUpdateSX1) class SX1Tools
         SX1Tools():SaveMVParIntoSX1(@cPerg,@aSX1Parameters)
         FWFreeArray(@aSX1Parameters)
     endif
-
-    FWFreeArray(@aParameters)
 
 return(lSet)
 
