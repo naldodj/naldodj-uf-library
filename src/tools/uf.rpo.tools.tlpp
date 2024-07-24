@@ -22,7 +22,7 @@ namespace uf
 using namespace uf
 
 static cCRLF:=CRLF as character
-static cUFDir:="\uf_rpo_tools\" as character
+static cUFRPOPath:="\uf_rpo_tools\" as character
 static cUFRPOName as character
 static cUFSourceFile as character
 
@@ -37,25 +37,14 @@ end class
 
 static method Open(lNew,cSourceFileName,cError) class RPOTools
 
-    local cRootPathSrv as character
-
     local lUFRpo:=.F. as logical
 
     paramtype 1 var lNew as logical optional default .T.
     paramtype 2 var cSourceFileName as character optional
     paramtype 3 var cError as character optional
 
-    if (!lIsDir(cUFDir))
-        cSourceDirtools():MakeDir(cUFDir)
-    endif
-
-    if (!lIsDir(cUFDirInc))
-        Dirtools():MakeDir(cUFDirInc)
-    endif
-
     if ((lNew).or.empty(cUFRPOName))
-        cRootPathSrv:=getRootPathSrv()
-        cUFRPOName:=cRootPathSrv
+        cUFRPOName:=cUFRPOPath
         cUFRPOName+="uf_rpo_tools"
         cUFRPOName+="_"
         cUFRPOName+=DtoS(Date())
@@ -64,7 +53,6 @@ static method Open(lNew,cSourceFileName,cError) class RPOTools
         cUFRPOName+="_"
         cUFRPOName+=UUIDRandom()
         cUFRPOName+=".uf_rpo"
-        cSourceFileName:=cUFRPOName
     endif
 
     if (empty(cSourceFileName).and.empty(cUFSourceFile))
@@ -78,7 +66,12 @@ static method Open(lNew,cSourceFileName,cError) class RPOTools
         cUFSourceFile+=".tlpp"
     elseif (!empty(cSourceFileName))
         cUFSourceFile:=cSourceFileName
+        if (!"."$cUFSourceFile)
+            cUFSourceFile+=".tlpp"
+        endif
     endif
+
+    cSourceFileName:=cUFSourceFile
 
     lUFRpo:=(valType(oUFRpo)=="O")
 
@@ -91,6 +84,7 @@ static method Open(lNew,cSourceFileName,cError) class RPOTools
     if (!lUFRpo)
         cError:="Não foi possível carregar o Repositório de Objetos"
     else
+        DirTools():MakeFileDir(cUFRPOName)
         lUFRpo:=oUFRpo:Open(cUFRPOName)
         if (!lUFRpo)
             cError:="Não foi possível carregar o Repositório de Objetos"
@@ -137,8 +131,8 @@ static method Compile(cSource,cError) class RPOTools
             break
         endif
 
-        DirTools():MakeFileDir(cUFDir+cUFSourceFile)
-        MemoWrite(cUFDir+cUFSourceFile,cPPO)
+        DirTools():MakeFileDir(cUFRPOPath+cUFSourceFile)
+        MemoWrite(cUFRPOPath+cUFSourceFile,cPPO)
 
         lUFRpo:=oUFRpo:Compile(cUFSourceFile,cPPO,0,oUFRpo:ChkSum(cPPO))
         if (!lUFRpo)
@@ -188,17 +182,5 @@ return(lUFRpo)
 static method Clean() class RPOTools
     local lUFRpo as logical
     lUFRpo:=RPOTools():Close(.T.)
-    aEval(directory(cUFDir+"*"),{|e|fErase(cUFDir+e[1])})
+    aEval(directory(cUFRPOPath+"*"),{|e|fErase(cUFRPOPath+e[1])})
 return(lUFRpo)
-
-static function getRootPathSrv() as character
-
-    local cRootPathSrv as character
-
-    cRootPathSrv:=allTrim(GetSrvProfString("RootPath",""))
-    if (right(cRootPathSrv,1)=="\")
-        cRootPathSrv:=subStr(cRootPathSrv,1,Len(cRootPathSrv)-1)
-    endif
-    cRootPathSrv+=cUFDir
-
-return(cRootPathSrv)
