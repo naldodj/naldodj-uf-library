@@ -1,0 +1,204 @@
+/*----------------------------------------------------------------------
+                        _                  _
+ _ __  _ __    ___     | |_   ___    ___  | | ___
+| '__|| '_ \  / _ \    | __| / _ \  / _ \ | |/ __|
+| |   | |_) || (_) | _ | |_ | (_) || (_) || |\__ \
+|_|   | .__/  \___/ (_) \__| \___/  \___/ |_||___/
+      |_|
+
+The source code `uf.rpo.tools.tlpp` is based on a more detailed and feature-rich
+source code, `dna.tech.rpo.tools.tlpp`, and implements part of the functionalities
+present in the latter.
+Both codes aim to load dynamically compiled functions into the RPO (Repositories of Objects of TOTVS Microsiga Protheus).
+
+*/
+
+#include "totvs.ch"
+#include "directry.ch"
+#include "parmtype.ch"
+#include "tlpp-core.th"
+
+namespace uf
+using namespace uf
+
+static cCRLF:=CRLF as character
+static cUFDir:="\uf_rpo_tools\" as character
+static cUFRPOName as character
+static cUFSourceFile as character
+
+static oUFRpo as object
+
+class RPOTools
+    static method Open(lNew as logical,cSourceFileName as character,cError as character) as logical
+    static method Compile(cSource as variant,cError as character) as logical
+    static method Close(lFree as logical) as logical
+    static method Clean() as logical
+end class
+
+static method Open(lNew,cSourceFileName,cError) class RPOTools
+
+    local cRootPathSrv as character
+
+    local lUFRpo:=.F. as logical
+
+    paramtype 1 var lNew as logical optional default .T.
+    paramtype 2 var cSourceFileName as character optional
+    paramtype 3 var cError as character optional
+
+    if (!lIsDir(cUFDir))
+        cSourceDirtools():MakeDir(cUFDir)
+    endif
+
+    if (!lIsDir(cUFDirInc))
+        Dirtools():MakeDir(cUFDirInc)
+    endif
+
+    if ((lNew).or.empty(cUFRPOName))
+        cRootPathSrv:=getRootPathSrv()
+        cUFRPOName:=cRootPathSrv
+        cUFRPOName+="uf_rpo_tools"
+        cUFRPOName+="_"
+        cUFRPOName+=DtoS(Date())
+        cUFRPOName+="_"
+        cUFRPOName+=strTran(Time(),":","")
+        cUFRPOName+="_"
+        cUFRPOName+=UUIDRandom()
+        cUFRPOName+=".uf_rpo"
+        cSourceFileName:=cUFRPOName
+    endif
+
+    if (empty(cSourceFileName).and.empty(cUFSourceFile))
+        cUFSourceFile:="UFAdvplCode"
+        cUFSourceFile+="_"
+        cUFSourceFile+=DToS(Date())
+        cUFSourceFile+="_"
+        cUFSourceFile+=strTran(Time(),":","")
+        cUFSourceFile+="_"
+        cUFSourceFile+=LTrim(Str(Randomize(1,9999)))
+        cUFSourceFile+=".tlpp"
+    elseif (!empty(cSourceFileName))
+        cUFSourceFile:=cSourceFileName
+    endif
+
+    lUFRpo:=(valType(oUFRpo)=="O")
+
+    if (!lUFRpo)
+        oUFRpo:=RPO():New(.T.)
+    endif
+
+    lUFRpo:=(valType(oUFRpo)=="O")
+
+    if (!lUFRpo)
+        cError:="Não foi possível carregar o Repositório de Objetos"
+    else
+        lUFRpo:=oUFRpo:Open(cUFRPOName)
+        if (!lUFRpo)
+            cError:="Não foi possível carregar o Repositório de Objetos"
+            cError+=cCRLF
+            cError+=cCRLF
+            cError+="Error Str  : "+oUFRpo:ErrStr
+            cError+=cCRLF
+            cError+="Error Col  : "+LTrim(Str(oUFRpo:ErrCol))
+            cError+=cCRLF
+            cError+="Error Line : "+LTrim(Str(oUFRpo:ErrLine))
+            cError+=cCRLF
+        endif
+    endif
+
+return(lUFRpo)
+
+static method Compile(cSource,cError) class RPOTools
+
+    local lNew:=.T. as logical
+
+    paramtype 1 var cSource as character,block
+    paramtype 2 var cError as character optional
+
+    cPPO:=allTrim(cSource)
+
+    begin sequence
+
+        lUFRpo:=RPOTools():Open(lNew,nil,@cError)
+        if (!lUFRpo)
+            break
+        endif
+
+        lUFRpo:=oUFRpo:StartBuild(.T.)
+        if (!lUFRpo)
+            cError:="Não foi possível preparar o Repositório de Objetos"
+            cError+=cCRLF
+            cError+=cCRLF
+            cError+="Error Str  : "+oUFRpo:ErrStr
+            cError+=cCRLF
+            cError+="Error Col  : "+LTrim(Str(oUFRpo:ErrCol))
+            cError+=cCRLF
+            cError+="Error Line : "+LTrim(Str(oUFRpo:ErrLine))
+            cError+=cCRLF
+            break
+        endif
+
+        DirTools():MakeFileDir(cUFDir+cUFSourceFile)
+        MemoWrite(cUFDir+cUFSourceFile,cPPO)
+
+        lUFRpo:=oUFRpo:Compile(cUFSourceFile,cPPO,0,oUFRpo:ChkSum(cPPO))
+        if (!lUFRpo)
+            cError:="Ocorreram erros no Compilador"
+            cError+=cCRLF
+            cError+=cCRLF
+            cError+="Error Str  : "+oUFRpo:ErrStr
+            cError+=cCRLF
+            cError+="Error Col  : "+LTrim(Str(oUFRpo:ErrCol))
+            cError+=cCRLF
+            cError+="Error Line : "+LTrim(Str(oUFRpo:ErrLine))
+            cError+=cCRLF
+            break
+        endif
+
+    end sequence
+
+    if (valType(oUFRpo)=="O")
+        oUFRpo:EndBuild()
+        RPOTools():Close(.F.)
+    endif
+
+    if (!lUFRpo)
+        return(lUFRpo)
+    endif
+
+    lUFRpo:=RPOTools():Open(lNew,nil,@cError)
+
+    if (valType(oUFRpo)=="O")
+        RPOTools():Close(.F.)
+    endif
+
+return(lUFRpo)
+
+static method Close(lFree) class RPOTools
+    local lUFRpo as logical
+    paramtype 1 var lFree as logical optional default .F.
+    lUFRpo:=(valType(oUFRpo)=="O")
+    if (lUFRpo)
+        oUFRpo:Close()
+        if (lFree)
+            FreeObj(oUFRpo)
+        endif
+    endif
+return(lUFRpo)
+
+static method Clean() class RPOTools
+    local lUFRpo as logical
+    lUFRpo:=RPOTools():Close(.T.)
+    aEval(directory(cUFDir+"*"),{|e|fErase(cUFDir+e[1])})
+return(lUFRpo)
+
+static function getRootPathSrv() as character
+
+    local cRootPathSrv as character
+
+    cRootPathSrv:=allTrim(GetSrvProfString("RootPath",""))
+    if (right(cRootPathSrv,1)=="\")
+        cRootPathSrv:=subStr(cRootPathSrv,1,Len(cRootPathSrv)-1)
+    endif
+    cRootPathSrv+=cUFDir
+
+return(cRootPathSrv)
