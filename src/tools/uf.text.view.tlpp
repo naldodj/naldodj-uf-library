@@ -5,6 +5,11 @@
 | |_| ||  _| _ | |_ |  __/ >  < | |_  _  \ V / | ||  __/ \ V  V /
  \__,_||_|  (_) \__| \___|/_/\_\ \__|(_)  \_/  |_| \___|  \_/\_/
 
+
+    The source code `uf.text.view.tlpp` is based on a more detailed and feature-rich
+    source code, `dna.tech.txteditmemo.tlpp` and `dna.tech.txttools.tlpp`, and implements part of the functionalities
+    present in the latter.
+
 */
 
 #include "totvs.ch"
@@ -152,7 +157,7 @@ static method Show(xMsg,cTitulo,cLabel,aButtons,bValid,lQuebraLinha,lSoExibeMsg,
             //Verifica se Irá mostrar "Regua"
             if (lShowRuler)
                 //Obtem as Linhas conforme LF
-                aRules:=uf.UFTools():StrTokArray(cMsg,chr(10))
+                aRules:=UFTools():StrTokArray(cMsg,chr(10))
                 //Verifica qual maior linha para a definição da Regua
                 nRulerSize:=0
                 nRules:=Len(aRules)
@@ -163,9 +168,9 @@ static method Show(xMsg,cTitulo,cLabel,aButtons,bValid,lQuebraLinha,lSoExibeMsg,
                 //Cria dados com o Tamanho da maior linha
                 cRuler1:=Replicate("W",nRulerSize)
                 //Obtem o intervalo da Regua
-                cRuler1:=UF.UFTools():TextRuler(cRuler1,.T.)
+                cRuler1:=UFTools():TextRuler(cRuler1,.T.)
                 //Obtem o intervalo da Regua (10x)
-                cRuler2:=UF.UFTools():TextRuler(cRuler1,.F.)
+                cRuler2:=UFTools():TextRuler(cRuler1,.F.)
                 //Obtem o Separador de Linha
                 cRulerDash:=Replicate("-",nRulerSize)
                 //Obtem o Separador de Coluna

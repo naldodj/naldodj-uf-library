@@ -5,6 +5,11 @@
 | |_| ||  _| _ | | | | | || (_| || || | | | _ |  __/ >  < |  __/| (__
  \__,_||_|  (_)|_| |_| |_| \__,_||_||_| |_|(_) \___|/_/\_\ \___| \___|
 
+
+    The source code `uf.main.exec.tlpp` is based on a more detailed and feature-rich
+    source code, `dna.tech.mainexec.tlpp`, and implements part of the functionalities
+    present in the latter.
+
 */
 
 #include "totvs.ch"

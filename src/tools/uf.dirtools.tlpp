@@ -5,6 +5,11 @@
 | |_| ||  _| _ | (_| || || |   | |_ | (_) || (_) || |\__ \
  \__,_||_|  (_) \__,_||_||_|    \__| \___/  \___/ |_||___/
 
+
+    The source code `uf.dirtools.tlpp` is based on a more detailed and feature-rich
+    source code, `dna.tech.dirtools.tlpp` and implements part of the functionalities
+    present in the latter.
+
 */
 
 #include "parmtype.ch"
@@ -33,7 +38,7 @@ static method MakeDir(cDirMake) class dirtools
     endif
     lIsDir:=lIsDir(cDirMake)
     if (!lIsDir)
-        lIsDir:=UF.dirtools():MakeFileDir(cDirMake)
+        lIsDir:=dirtools():MakeFileDir(cDirMake)
     endif
     return(lIsDir)
 
@@ -64,12 +69,12 @@ static method MakeFileDir(cDirMake) class dirtools
     cFullPath:=cDrive
     cFullPath+=cPath
 
-    aDirs:=uf.UFTools():StrTokArray(cFullPath,"\")
+    aDirs:=UFTools():StrTokArray(cFullPath,"\")
     nAttempts:=Len(aDirs)
 
-    lIsDir:=UF.DirMake(cFullPath,@cDrive,@cPath,@cFile,@cExt)
+    lIsDir:=DirMake(cFullPath,@cDrive,@cPath,@cFile,@cExt)
     while (!lIsDir)
-        lIsDir:=UF.DirMake(cFullPath,@cDrive,@cPath,@cFile,@cExt)
+        lIsDir:=DirMake(cFullPath,@cDrive,@cPath,@cFile,@cExt)
         if (lIsDir)
             exit
         endif
@@ -111,9 +116,9 @@ static method DirRemove(cDirRoot,cDirRemove) class dirtools
     cFullPathRoot:=cDrive
     cFullPathRoot+=cPath
 
-    lDirRemove:=UF.RemoveDir(cFullPathRoot,cDirRemove,@cDrive,@cPath,@cFile,@cExt)
+    lDirRemove:=RemoveDir(cFullPathRoot,cDirRemove,@cDrive,@cPath,@cFile,@cExt)
     while (!lDirRemove)
-        lDirRemove:=UF.RemoveDir(@cFullPathRoot,@cDirRemove,@cDrive,@cPath,@cFile,@cExt)
+        lDirRemove:=RemoveDir(@cFullPathRoot,@cDirRemove,@cDrive,@cPath,@cFile,@cExt)
         if (lDirRemove)
             exit
         endif
@@ -152,7 +157,7 @@ static function DirMake(cDirMake as character,cDrive as character,cPath as chara
 
     if (!lIsDir)
 
-        aDirectory:=uf.UFTools():StrTokArray(cDirMake,"\")
+        aDirectory:=UFTools():StrTokArray(cDirMake,"\")
 
         cTDirectory:=""
 
@@ -199,7 +204,7 @@ static function RemoveDir(cRootDir,cRemoveDir as character,cDrive as character,c
 
     if (!lRemoveDir)
 
-        aDirectory:=uf.UFTools():StrTokArray(cRootDir,"\")
+        aDirectory:=UFTools():StrTokArray(cRootDir,"\")
 
         cTDirectory:=""
 

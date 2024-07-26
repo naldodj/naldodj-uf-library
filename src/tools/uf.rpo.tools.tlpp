@@ -29,23 +29,25 @@ static cUFSourceFile as character
 static oUFRpo as object
 
 class RPOTools
-    static method Open(lNew as logical,cSourceFileName as character,cError as character) as logical
+    static method Open(cSourceFileName as character,cError as character) as logical
     static method Compile(cSource as variant,cError as character) as logical
     static method Close(lFree as logical) as logical
     static method Clean() as logical
 end class
 
-static method Open(lNew,cSourceFileName,cError) class RPOTools
+static method Open(cSourceFileName,cError) class RPOTools
+
+    local cRootPathSrv as character
 
     local lUFRpo:=.F. as logical
 
-    paramtype 1 var lNew as logical optional default .T.
-    paramtype 2 var cSourceFileName as character optional
-    paramtype 3 var cError as character optional
+    paramtype 1 var cSourceFileName as character optional
+    paramtype 2 var cError as character optional
 
-    if ((lNew).or.empty(cUFRPOName))
-        cUFRPOName:=cUFRPOPath
-        cUFRPOName+="uf_rpo_tools"
+    cRootPathSrv:=getRootPathSrv()
+
+    if (empty(cUFRPOName))
+        cUFRPOName:="uf_rpo_tools"
         cUFRPOName+="_"
         cUFRPOName+=DtoS(Date())
         cUFRPOName+="_"
@@ -76,7 +78,7 @@ static method Open(lNew,cSourceFileName,cError) class RPOTools
     lUFRpo:=(valType(oUFRpo)=="O")
 
     if (!lUFRpo)
-        oUFRpo:=RPO():New(.T.)
+        oUFRpo:=RPO():New(if(!isBlind(),.T.,nil))
     endif
 
     lUFRpo:=(valType(oUFRpo)=="O")
@@ -84,8 +86,8 @@ static method Open(lNew,cSourceFileName,cError) class RPOTools
     if (!lUFRpo)
         cError:="Não foi possível carregar o Repositório de Objetos"
     else
-        DirTools():MakeFileDir(cUFRPOName)
-        lUFRpo:=oUFRpo:Open(cUFRPOName)
+        DirTools():MakeFileDir(cUFRPOPath)
+        lUFRpo:=oUFRpo:Open(cRootPathSrv+cUFRPOName)
         if (!lUFRpo)
             cError:="Não foi possível carregar o Repositório de Objetos"
             cError+=cCRLF
@@ -103,7 +105,7 @@ return(lUFRpo)
 
 static method Compile(cSource,cError) class RPOTools
 
-    local lNew:=.T. as logical
+    local cRootPathSrv as character
 
     paramtype 1 var cSource as character,block
     paramtype 2 var cError as character optional
@@ -112,7 +114,9 @@ static method Compile(cSource,cError) class RPOTools
 
     begin sequence
 
-        lUFRpo:=RPOTools():Open(lNew,nil,@cError)
+        RPOTools():Close(.F.)
+
+        lUFRpo:=RPOTools():Open(nil,@cError)
         if (!lUFRpo)
             break
         endif
@@ -131,10 +135,12 @@ static method Compile(cSource,cError) class RPOTools
             break
         endif
 
-        DirTools():MakeFileDir(cUFRPOPath+cUFSourceFile)
+        Dirtools():MakeDir(cUFRPOPath)
         MemoWrite(cUFRPOPath+cUFSourceFile,cPPO)
 
-        lUFRpo:=oUFRpo:Compile(cUFSourceFile,cPPO,0,oUFRpo:ChkSum(cPPO))
+        cRootPathSrv:=getRootPathSrv()
+
+        lUFRpo:=oUFRpo:Compile(cUFRPOPath+cUFSourceFile,cPPO,0,oUFRpo:ChkSum(cPPO))
         if (!lUFRpo)
             cError:="Ocorreram erros no Compilador"
             cError+=cCRLF
@@ -159,7 +165,7 @@ static method Compile(cSource,cError) class RPOTools
         return(lUFRpo)
     endif
 
-    lUFRpo:=RPOTools():Open(lNew,nil,@cError)
+    lUFRpo:=RPOTools():Open(nil,@cError)
 
     if (valType(oUFRpo)=="O")
         RPOTools():Close(.F.)
@@ -180,7 +186,32 @@ static method Close(lFree) class RPOTools
 return(lUFRpo)
 
 static method Clean() class RPOTools
+    local cMutexID:="_RPO_TOOLS" as character
+    local cMutexStack:=ProcName() as character
     local lUFRpo as logical
     lUFRpo:=RPOTools():Close(.T.)
-    aEval(directory(cUFRPOPath+"*"),{|e|fErase(cUFRPOPath+e[1])})
+    if (Mutex():Lock(cMutexID,cMutexStack))
+        aEval(directory(cUFRPOPath+"*"),{|e|fErase(cUFRPOPath+e[1])})
+        Mutex():UnLock(cMutexID,cMutexStack)
+    else
+        fErase(cUFRPOPath+cUFRPOName)
+        fErase(cUFRPOPath+cUFSourceFile)
+    endif
+    Eval({|xNil|(cUFRPOName:=(cUFSourceFile:=xNil))},nil)
 return(lUFRpo)
+
+static function getRootPathSrv() as character
+
+    local cRootPathSrv as character
+
+    cRootPathSrv:=allTrim(GetSrvProfString("RootPath",""))
+
+    if (right(cRootPathSrv,1)=="\")
+        cRootPathSrv:=subStr(cRootPathSrv,1,Len(cRootPathSrv)-1)
+    endif
+
+    cRootPathSrv+=cUFRPOPath
+
+    Dirtools():MakeDir(cUFRPOPath)
+
+return(cRootPathSrv)

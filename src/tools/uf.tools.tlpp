@@ -5,6 +5,11 @@
 | |_| ||  _| _ | |_ | (_) || (_) || |\__ \
  \__,_||_|  (_) \__| \___/  \___/ |_||___/
 
+
+    The source code `uf.tools.tlpp` is based on a more detailed and feature-rich
+    source code, `dna.tech.ctools.tlpp` and `dna.tech.ctools.tlpp`, and implements part of the functionalities
+    present in the latter.
+
 */
 #include "totvs.ch"
 #include "parmtype.ch"
@@ -16,6 +21,7 @@ class UFTools
     static method RetPictVal(nVal as numeric,lDecZero as logical,nInt as numeric,nDec as numeric,lPictSepMil as logical) as character
     static method TextRuler(cText as character,lStep10 as logical) as character
     static method StrTokArray(cString as character,cToken as character,bEvalToken as codeblock) as array
+    static method GetAutoGRLog(lKeepErrors as logical) as array
 end class
 
 static method RetPictVal(nVal,lDecZero,nInt,nDec,lPictSepMil) class UFTools
@@ -157,3 +163,14 @@ static method StrTokArray(cString,cToken,bEvalToken) class UFTools
     cStr:=""
 
 return(aStrTokArr)
+
+static method GetAutoGRLog(lKeepErrors) class UFTools
+    //Warning: __aErrAuto é um "Ponteiro" para __aErrAuto de VarAutoLog. Não limpar
+    local __aErrAuto as array
+    local aErrorLog:=aClone(GetAutoGRLog()) as array
+    paramtype 1 var lKeepErrors as logical optional default .T.
+    if (lKeepErrors)
+        __aErrAuto:=VarAutoLog()
+        aEval(aErrorLog,{|e|aAdd(__aErrAuto,e)})
+    endif
+return(aErrorLog)

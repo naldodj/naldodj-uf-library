@@ -7,6 +7,10 @@
  \__,_||_|  (_)|_| |_| |_||___/|_| |_| |_| \__, | \___| \__| \___|/_/\_\
                                            |___/
 
+    The source code `uf.msmgetex.tlpp` is based on a more detailed and feature-rich
+    source code, `dna.tech.msmgetex.tlpp`, `sqltools.advpl.model.prw` and `dna.tech.sxb.conpad1.tlpp`, and implements part of the functionalities
+    present in the latter.
+
 Implementa Visualização do Tipo MsMGet
 
 */
@@ -118,42 +122,42 @@ static method ViewData(cAlias,nRecNo,cTitle,aButtons) class MsMGetEx
             private &(cVar):=xValue as variant
             aAdd(aFieldsNoSX3,Array(18))
             aFieldsNoSX3[nField][1]:=getSX3Cache(cField,"X3_TITULO")//-> titulo
-            uf.dfv():Default(@aFieldsNoSX3[nField][1],cField)
+            dfv():Default(@aFieldsNoSX3[nField][1],cField)
             aFieldsNoSX3[nField][2]:=cField//-> campo
             aFieldsNoSX3[nField][3]:=getSX3Cache(cField,"X3_TIPO")//-> tipo
-            uf.dfv():Default(@aFieldsNoSX3[nField][3],adbStruct[nField][DBS_TYPE])
+            dfv():Default(@aFieldsNoSX3[nField][3],adbStruct[nField][DBS_TYPE])
             if (aFieldsNoSX3[nField][3]<>adbStruct[nField][DBS_TYPE])
                 aFieldsNoSX3[nField][3]:=adbStruct[nField][DBS_TYPE]
             endif
             aFieldsNoSX3[nField][4]:=getSX3Cache(cField,"X3_TAMANHO")//-> tamanho
-            uf.dfv():Default(@aFieldsNoSX3[nField][4],adbStruct[nField][DBS_LEN])
+            dfv():Default(@aFieldsNoSX3[nField][4],adbStruct[nField][DBS_LEN])
             if (aFieldsNoSX3[nField][4]<>adbStruct[nField][DBS_LEN])
                 aFieldsNoSX3[nField][4]:=adbStruct[nField][DBS_LEN]
             endif
             aFieldsNoSX3[nField][5]:=getSX3Cache(cField,"X3_DECIMAL")//-> decimal
-            uf.dfv():Default(@aFieldsNoSX3[nField][5],adbStruct[nField][DBS_DEC])
+            dfv():Default(@aFieldsNoSX3[nField][5],adbStruct[nField][DBS_DEC])
             aFieldsNoSX3[nField][6]:=getSX3Cache(cField,"X3_PICTURE")//-> picture
-            uf.dfv():Default(@aFieldsNoSX3[nField][6],"")
+            dfv():Default(@aFieldsNoSX3[nField][6],"")
             aFieldsNoSX3[nField][7]:=getSX3Cache(cField,"X3_VALID")//-> valid
-            uf.dfv():Default(@aFieldsNoSX3[nField][7],"allWaysTrue()")
+            dfv():Default(@aFieldsNoSX3[nField][7],"allWaysTrue()")
             aFieldsNoSX3[nField][8]:=.F.//-> obrigat
             aFieldsNoSX3[nField][9]:=getSX3Cache(cField,"X3_NIVEL")//-> nivel
-            uf.dfv():Default(@aFieldsNoSX3[nField][9],0)
+            dfv():Default(@aFieldsNoSX3[nField][9],0)
             aFieldsNoSX3[nField][10]:=getSX3Cache(cField,"X3_RELACAO")//-> inicializador padrao
-            uf.dfv():Default(@aFieldsNoSX3[nField][10],getValType(adbStruct[nField][DBS_TYPE]))
+            dfv():Default(@aFieldsNoSX3[nField][10],getValType(adbStruct[nField][DBS_TYPE]))
             aFieldsNoSX3[nField][11]:=getSX3Cache(cField,"X3_F3")//-> F3
-            uf.dfv():Default(@aFieldsNoSX3[nField][11],"")
+            dfv():Default(@aFieldsNoSX3[nField][11],"")
             aFieldsNoSX3[nField][12]:=getSX3Cache(cField,"X3_WHEN")//-> when
-            uf.dfv():Default(@aFieldsNoSX3[nField][12],"")
+            dfv():Default(@aFieldsNoSX3[nField][12],"")
             aFieldsNoSX3[nField][13]:=.T.//-> visual
             aFieldsNoSX3[nField][14]:=.F.//-> chave
             aFieldsNoSX3[nField][15]:=getSX3Cache(cField,"X3_CBOX") //-> box
-            uf.dfv():Default(@aFieldsNoSX3[nField][15],"")
+            dfv():Default(@aFieldsNoSX3[nField][15],"")
             aFieldsNoSX3[nField][16]:=getSX3Cache(cField,"X3_FOLDER")//-> folder
-            uf.dfv():Default(@aFieldsNoSX3[nField][16],"")
+            dfv():Default(@aFieldsNoSX3[nField][16],"")
             aFieldsNoSX3[nField][17]:=.T.//-> nao alteravel
             aFieldsNoSX3[nField][18]:=getSX3Cache(cField,"X3_PICTVAR")//-> pictvar
-            uf.dfv():Default(@aFieldsNoSX3[nField][18],"")
+            dfv():Default(@aFieldsNoSX3[nField][18],"")
         next nField
 
         oFWDefSize:=FWDefSize():New(.T.,.T.)//Com enchoicebar

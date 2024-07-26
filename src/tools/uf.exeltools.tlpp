@@ -5,6 +5,10 @@
 | |_| ||  _| _ |  __/ >  < | (__ |  __/| || |_ | (_) || (_) || |\__ \
  \__,_||_|  (_) \___|/_/\_\ \___| \___||_| \__| \___/  \___/ |_||___/
 
+ The source code `uf.exeltools.tlpp` is based on a more detailed and feature-rich
+source code, `dna.tech.exceltools.tlpp`, and implements part of the functionalities
+present in the latter.
+
 */
 
 #include "totvs.ch"
