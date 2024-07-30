@@ -21,7 +21,7 @@ class UFTools
     static method RetPictVal(nVal as numeric,lDecZero as logical,nInt as numeric,nDec as numeric,lPictSepMil as logical) as character
     static method TextRuler(cText as character,lStep10 as logical) as character
     static method StrTokArray(cString as character,cToken as character,bEvalToken as codeblock) as array
-    static method GetAutoGRLog(lKeepErrors as logical) as array
+    static method GetAutoGRLog(lKeepErrors as logical,lSanitization as logical) as array
 end class
 
 static method RetPictVal(nVal,lDecZero,nInt,nDec,lPictSepMil) class UFTools
@@ -164,13 +164,26 @@ static method StrTokArray(cString,cToken,bEvalToken) class UFTools
 
 return(aStrTokArr)
 
-static method GetAutoGRLog(lKeepErrors) class UFTools
-    //Warning: __aErrAuto é um "Ponteiro" para __aErrAuto de VarAutoLog. Não limpar
+static method GetAutoGRLog(lKeepErrors,lSanitization) class UFTools
     local __aErrAuto as array
     local aErrorLog:=aClone(GetAutoGRLog()) as array
+    local cError as character
+    local nError,nErrors as numeric
     paramtype 1 var lKeepErrors as logical optional default .T.
+    paramtype 2 var lSanitization as logical optional default .T.
     if (lKeepErrors)
+        //Warning: __aErrAuto é um "Ponteiro" para __aErrAuto de VarAutoLog. Não limpar
         __aErrAuto:=VarAutoLog()
-        aEval(aErrorLog,{|e|aAdd(__aErrAuto,e)})
+        if (!lSanitization)
+            aEval(aErrorLog,{|e|aAdd(__aErrAuto,e)})
+        else
+            nErrors:=Len(aErrorLog)
+            for nError:=1 to nErrors
+                cError:=aErrorLog[nError]
+                if (aScan(__aErrAuto,{|e|(e==cError)})==0)
+                    aAdd(__aErrAuto,cError)
+                endif
+            next nError
+        endif
     endif
 return(aErrorLog)
