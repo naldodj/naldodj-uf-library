@@ -17,7 +17,7 @@ present in the latter.
 namespace uf
 using namespace uf
 
-static oUFHMMutex:=tHashMap():New() as object
+static oHMMutex:=tHashMap():New() as object
 
 class Mutex
 
@@ -43,14 +43,14 @@ static method Lock(cMutexID,cMutexStack,nHDLMutex,nError) class Mutex
     cIDMutex:=cMutexStack
     cIDMutex+=if((cMutexStack!="_"),"_","")
     cIDMutex+=cMutexID
-    lHasMutex:=oUFHMMutex:Get(cIDMutex,@oFWThreadSemaphore)
+    lHasMutex:=oHMMutex:Get(cIDMutex,@oFWThreadSemaphore)
     if (!lHasMutex)
         oFWThreadSemaphore:=FWThreadSemaphore():New()
         oFWThreadSemaphore:SetID(cIDMutex)
         if (oFWThreadSemaphore:Exist(cIDMutex))
             oFWThreadSemaphore:Erase()
         endif
-        oUFHMMutex:Set(cIDMutex,@oFWThreadSemaphore)
+        oHMMutex:Set(cIDMutex,@oFWThreadSemaphore)
         lLock:=oFWThreadSemaphore:Open(lShared)
     else
         lLock:=(oFWThreadSemaphore:nLCKFile!=(-1))
@@ -72,14 +72,14 @@ static method UnLock(cMutexID,cMutexStack) class Mutex
     cIDMutex:=cMutexStack
     cIDMutex+=if(cMutexStack!="_","_","")
     cIDMutex+=cMutexID
-    lHasMutex:=oUFHMMutex:Get(cIDMutex,@oFWThreadSemaphore)
+    lHasMutex:=oHMMutex:Get(cIDMutex,@oFWThreadSemaphore)
     if (lHasMutex)
         oFWThreadSemaphore:Close()
         oFWThreadSemaphore:Erase()
         lUnLock:=(!oFWThreadSemaphore:Exist(cIDMutex))
     endif
     FreeObj(@oFWThreadSemaphore)
-    oUFHMMutex:Del(cIDMutex)
+    oHMMutex:Del(cIDMutex)
 return(lUnLock)
 
 static method Clean(cMutexStack) class Mutex
@@ -92,19 +92,19 @@ static method Clean(cMutexStack) class Mutex
 
     paramtype 1 var cMutexStack as character optional default "_"
 
-    oUFHMMutex:List(@aSemaphores)
+    oHMMutex:List(@aSemaphores)
 
     nSemaphores:=Len(aSemaphores)
     for nSemaphore:=1 to nSemaphores
         cIDMutex:=aSemaphores[nSemaphore][1]
         if (left(cIDMutex,Len(cMutexStack))==cMutexStack)
-            UF.Mutex():UnLock(cIDMutex,cMutexStack)
+            Mutex():UnLock(cIDMutex,cMutexStack)
         endif
     next nSemaphore
 
     nSemaphores:=Len(aSemaphores)
     if ((nSemaphores==0).or.(cMutexStack=="_"))
-        oUFHMMutex:Clean()
+        oHMMutex:Clean()
     endif
 
 return(nil)
@@ -129,14 +129,14 @@ method LockByFile(cHDLMutex,nHDLMutex,nSleep,nAttempts,cMutexStack,nError) class
 
     if (lCreate)
         while ((!KillApp()).and.(!lMutex).and.(nAttempt<=nAttempts))
-            lMutex:=UF.Timer():TimerSleep(nSleep,15,{||UF.Mutex():Lock(@cHDLMutex,@cMutexStack,@nHDLMutex,@nError)})
+            lMutex:=Timer():TimerSleep(nSleep,15,{||UF.Mutex():Lock(@cHDLMutex,@cMutexStack,@nHDLMutex,@nError)})
             if (lMutex)
                 exit
             endif
             nAttempt++
         end while
     else
-        if (UF.Mutex():UnLockByFile(@cHDLMutex,@nHDLMutex,@cMutexStack))
+        if (Mutex():UnLockByFile(@cHDLMutex,@nHDLMutex,@cMutexStack))
             nHDLMutex:=(-1)
         endif
     endif
@@ -153,7 +153,7 @@ method UnLockByFile(cHDLMutex,nHDLMutex,cMutexStack) class Mutex
     cHDLMutex:=lower(cHDLMutex)
     lUnLock:=(nHDLMutex!=(-1))
     if (lUnLock)
-        lUnLock:=UF.Mutex():UnLock(@cHDLMutex,@cMutexStack)
+        lUnLock:=Mutex():UnLock(@cHDLMutex,@cMutexStack)
         if (lUnLock)
             nHDLMutex:=(-1)
         endif
