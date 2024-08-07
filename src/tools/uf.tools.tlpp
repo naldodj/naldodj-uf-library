@@ -22,6 +22,7 @@ class UFTools
     static method TextRuler(cText as character,lStep10 as logical) as character
     static method StrTokArray(cString as character,cToken as character,bEvalToken as codeblock) as array
     static method GetAutoGRLog(lKeepErrors as logical,lSanitization as logical) as array
+    static method SetBlindMode(lSetBlind as logical) as logical
 end class
 
 static method RetPictVal(nVal,lDecZero,nInt,nDec,lPictSepMil) class UFTools
@@ -187,3 +188,21 @@ static method GetAutoGRLog(lKeepErrors,lSanitization) class UFTools
         endif
     endif
 return(aErrorLog)
+
+static method SetBlindMode(lSetBlind) class UFTools
+
+    local lIsBlind:=IsBlind() as logical
+
+    paramtype 1 var lSetBlind as logical default lIsBlind
+
+    if (!lSetBlind)
+        HelpInDark(!lSetBlind)
+        if ((Type("__cInternet")=="C").and.(__cInternet=="AUTOMATICO"))
+            __cInternet:=NIL
+        endif
+    else
+        HelpInDark(lSetBlind)
+        __cInternet:="AUTOMATICO"
+    endif
+
+return(lIsBlind)

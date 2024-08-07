@@ -55,11 +55,11 @@ static method SetMVParFromArray(aParameters,cPerg,lUpdateSX1) class SX1Tools
 
         lPerg:=(!empty(cPerg))
         if (lPerg)
-            lHelpInDark:=HelpInDark(.T.)
-            __cInternet:="AUTOMATICO"
+            //Define Modo Blind
+            lHelpInDark:=Blind():SetBlindMode(.T.)
             lPerg:=Pergunte(cPerg,.T.)
-            __cInternet:=cSv__cInternet
-            HelpInDark(lHelpInDark)
+            //Restaura Modo Blind
+            Blind():SetBlindMode(lHelpInDark)
             if (!lPerg)
                 lError:=.T.
                 break
@@ -109,6 +109,10 @@ static method SetMVParFromArray(aParameters,cPerg,lUpdateSX1) class SX1Tools
         FWFreeArray(@aSX1Parameters)
     endif
 
+    if (ValType(cSv__cInternet)=="C")
+        __cInternet:=cSv__cInternet
+    endif
+
 return(lSet)
 
 static method SetMVParFromHashMap(oHMParameters,cPerg,lUpdateSX1) class SX1Tools
@@ -140,11 +144,9 @@ static method SetMVParFromHashMap(oHMParameters,cPerg,lUpdateSX1) class SX1Tools
 
         lPerg:=(!empty(cPerg))
         if (lPerg)
-            lHelpInDark:=HelpInDark(.T.)
-            __cInternet:="AUTOMATICO"
+            lHelpInDark:=Blind():SetBlindMode(.T.)
             lPerg:=Pergunte(cPerg,.T.)
-            __cInternet:=cSv__cInternet
-            HelpInDark(lHelpInDark)
+            Blind():SetBlindMode(lHelpInDark)
             if (!lPerg)
                 lError:=.T.
                 break
@@ -199,6 +201,10 @@ static method SetMVParFromHashMap(oHMParameters,cPerg,lUpdateSX1) class SX1Tools
         aSX1Parameters:=SX1Tools():BuildSX1Parameters(@cPerg,@oHMParameters)
         SX1Tools():SaveMVParIntoSX1(@cPerg,@aSX1Parameters)
         FWFreeArray(@aSX1Parameters)
+    endif
+
+    if (ValType(cSv__cInternet)=="C")
+        __cInternet:=cSv__cInternet
     endif
 
 return(lSet)
