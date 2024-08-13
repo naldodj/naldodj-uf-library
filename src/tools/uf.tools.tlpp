@@ -190,19 +190,4 @@ static method GetAutoGRLog(lKeepErrors,lSanitization) class UFTools
 return(aErrorLog)
 
 static method SetBlindMode(lSetBlind) class UFTools
-
-    local lIsBlind:=IsBlind() as logical
-
-    paramtype 1 var lSetBlind as logical default lIsBlind
-
-    if (!lSetBlind)
-        HelpInDark(!lSetBlind)
-        if ((Type("__cInternet")=="C").and.(__cInternet=="AUTOMATICO"))
-            __cInternet:=NIL
-        endif
-    else
-        HelpInDark(lSetBlind)
-        __cInternet:="AUTOMATICO"
-    endif
-
-return(lIsBlind)
+return(Blind():SetBlindMode(@lSetBlind))
