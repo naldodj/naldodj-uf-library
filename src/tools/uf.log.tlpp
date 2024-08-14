@@ -6,7 +6,7 @@
  \__,_||_|  (_)|_| \___/  \__, |
                           |___/
 
- The source code `uf.log.tlpp` is based on a more detailed and feature-rich
+ The source code `log.tlpp` is based on a more detailed and feature-rich
 source code, `dna.tech.log.tlpp` and `dna.tech.tlogreport.tlpp`, and implements part of the functionalities
 present in the latter.
 
@@ -285,7 +285,7 @@ method LogAsFile(cLogFile,nError,lLogAsConOutIfError) class Log
 
     begin sequence
 
-        lLogAsFile:=UF.DirTools():MakeFileDir(cLogFile)
+        lLogAsFile:=DirTools():MakeFileDir(cLogFile)
 
         if (!lLogAsFile)
             nError:=fError()
@@ -388,7 +388,7 @@ method LogAsHtmlFile(cLogFile,cTitle,nError,lLogAsConOutIfError) class Log
 
     begin sequence
 
-        lLogAsHtmlFile:=UF.DirTools():MakeFileDir(cLogFile)
+        lLogAsHtmlFile:=DirTools():MakeFileDir(cLogFile)
 
         if (!lLogAsHtmlFile)
             nError:=fError()
@@ -634,7 +634,7 @@ method FormatLogFile(cLogPath,cLogName) class Log
     cLogFile+="."
     cLogFile+=Lower(cLogName)
     cLogFile+="."
-    cLogFile+=strZero(ThreadID(),Len(UF.UFTools():RetPictVal(ThreadID())))
+    cLogFile+=strZero(ThreadID(),Len(UFTools():RetPictVal(ThreadID())))
     cLogFile+="."
     cLogFile+=StrZero(Randomize(1,9999),4)
     cLogFile+=".log"
