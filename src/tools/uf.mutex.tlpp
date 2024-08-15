@@ -129,7 +129,7 @@ method LockByFile(cHDLMutex,nHDLMutex,nSleep,nAttempts,cMutexStack,nError) class
 
     if (lCreate)
         while ((!KillApp()).and.(!lMutex).and.(nAttempt<=nAttempts))
-            lMutex:=Timer():TimerSleep(nSleep,15,{||__MyMutexLoock(@cHDLMutex,@cMutexStack,@nHDLMutex,@nError)})
+            lMutex:=Timer():TimerSleep(nSleep,15,{||__MyMutexLock(@cHDLMutex,@cMutexStack,@nHDLMutex,@nError)})
             if (lMutex)
                 exit
             endif
@@ -145,7 +145,7 @@ method LockByFile(cHDLMutex,nHDLMutex,nSleep,nAttempts,cMutexStack,nError) class
 
 return(lMutex)
 
-static function __MyMutexLoock(cHDLMutex as character,cMutexStack as character,nHDLMutex as numeric,nError as numeric)
+static function __MyMutexLock(cHDLMutex as character,cMutexStack as character,nHDLMutex as numeric,nError as numeric)
 return(Mutex():Lock(@cHDLMutex,@cMutexStack,@nHDLMutex,@nError))
 
 method UnLockByFile(cHDLMutex,nHDLMutex,cMutexStack) class Mutex
