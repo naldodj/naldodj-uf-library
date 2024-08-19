@@ -12,14 +12,22 @@
     present in the latter.
 
 */
-#include "totvs.ch"
-#include "parmtype.ch"
 
 namespace uf
 using namespace uf
 
+static s__cInternet
+static s__lHelpInDark
+
+#include "set.ch"
+#include "totvs.ch"
+#include "common.ch"
+#include "parmtype.ch"
+
 class Blind
     static method SetBlindMode(lSetBlind as logical) as logical
+    static method SaveBlindMode() as variant
+    static method RestoreBlindMode() as variant
 end class
 
 static method SetBlindMode(lSetBlind) class Blind
@@ -39,3 +47,30 @@ static method SetBlindMode(lSetBlind) class Blind
     endif
 
 return(lIsBlind)
+
+static method SaveBlindMode() class Blind
+
+    if (Type("__cInternet")=="C")
+        s__cInternet:=__cInternet
+    else
+        s__cInternet:=NIL
+    endif
+
+    s__lHelpInDark:=HelpInDark(.T.)
+    HelpInDark(s__lHelpInDark)
+
+return
+
+static method RestoreBlindMode() class Blind
+
+    if (ISCHARACTER(s__cInternet))
+        __cInternet:=s__cInternet
+    else
+        __cInternet:=NIL
+    endif
+
+    if (ISLOGICAL(s__lHelpInDark))
+        HelpInDark(s__lHelpInDark)
+    endif
+
+return
