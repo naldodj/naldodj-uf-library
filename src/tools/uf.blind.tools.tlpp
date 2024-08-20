@@ -16,8 +16,8 @@
 namespace uf
 using namespace uf
 
-static s__cInternet
-static s__lHelpInDark
+static s__aBlindMode:=Array(0) as array
+static s__nBlindModeAT as numeric
 
 #include "set.ch"
 #include "totvs.ch"
@@ -50,27 +50,64 @@ return(lIsBlind)
 
 static method SaveBlindMode() class Blind
 
+    local cStack:=ProcName(1) as character
+    local cSv__cInternet as character
+    local lSv__lHelpInDark as logical
+
     if (Type("__cInternet")=="C")
-        s__cInternet:=__cInternet
-    else
-        s__cInternet:=NIL
+        cSv__cInternet:=__cInternet
     endif
 
-    s__lHelpInDark:=HelpInDark(.T.)
-    HelpInDark(s__lHelpInDark)
+    lSv__lHelpInDark:=HelpInDark(.T.)
+    HelpInDark(lSv__lHelpInDark)
+
+    aAdd(s__aBlindMode,JSONObject():New())
+    s__nBlindModeAT:=Len(s__aBlindMode)
+    s__aBlindMode[s__nBlindModeAT]["stack"]:=cStack
+    s__aBlindMode[s__nBlindModeAT]["__cInternet"]:=cSv__cInternet
+    s__aBlindMode[s__nBlindModeAT]["lHelpInDark"]:=lSv__lHelpInDark
 
 return
 
 static method RestoreBlindMode() class Blind
 
-    if (ISCHARACTER(s__cInternet))
-        __cInternet:=s__cInternet
-    else
-        __cInternet:=NIL
-    endif
+    local cStack:=ProcName(1) as character
 
-    if (ISLOGICAL(s__lHelpInDark))
-        HelpInDark(s__lHelpInDark)
-    endif
+    begin sequence
+
+        if ((valType(s__aBlindMode)!="A").or.(Empty(s__aBlindMode)))
+            break
+        endif
+
+        if (valType(s__nBlindMode)!="N")
+            s__nBlindMode:=aScan(s__aBlindMode,{|jStack|jStack["stack"]==cStack})
+            if (s__nBlindMode==0)
+                break
+            endif
+        elseif (s__nBlindMode<=Len(s__aBlindMode))
+            if (s__aBlindMode[s__nBlindMode]["stack"]!=cStack)
+                s__nBlindMode:=aScan(s__aBlindMode,{|jStack|jStack["stack"]==cStack})
+                if (s__nBlindMode==0)
+                    break
+                endif
+            endif
+        endif
+
+        if (ISCHARACTER(s__aBlindMode[s__nBlindMode]["__cInternet"]))
+            __cInternet:=s__aBlindMode[s__nBlindMode]["__cInternet"]
+        else
+            __cInternet:=NIL
+        endif
+
+        if (ISLOGICAL(s__aBlindMode[s__nBlindMode]["lHelpInDark"]))
+            HelpInDark(s__aBlindMode[s__nBlindMode]["lHelpInDark"])
+        endif
+
+        FreeObj(@s__aBlindMode[s__nBlindMode])
+        aDel(s__aBlindMode,s__nBlindMode)
+        s__nBlindMode:=Len(s__aBlindMode)
+        aSize(s__aBlindMode,--s__nBlindMode)
+
+    end sequence
 
 return
