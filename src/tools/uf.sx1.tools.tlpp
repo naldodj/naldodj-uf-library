@@ -12,11 +12,11 @@
 
 */
 
-#include "totvs.ch"
-#include "parmtype.ch"
-
 namespace uf
 using namespace uf
+
+#include "totvs.ch"
+#include "parmtype.ch"
 
 class SX1Tools
 
@@ -33,7 +33,6 @@ static method SetMVParFromArray(aParameters,cPerg,lUpdateSX1) class SX1Tools
     local aSX1Parameters as array
 
     local cMvPar:="MV_PAR00" as character
-    local cSv__cInternet:=if(Type("__cInternet")=="C",__cInternet,nil) as character
 
     local bErrorBlock as codeblock
 
@@ -50,6 +49,8 @@ static method SetMVParFromArray(aParameters,cPerg,lUpdateSX1) class SX1Tools
     paramtype 1 var aParameters as array optional default Array(0)
     paramtype 2 var cPerg as character optional default ""
     paramtype 3 var lUpdateSX1 as logical optional default .T.
+
+    Blind():SaveBlindMode()
 
     begin sequence
 
@@ -109,9 +110,7 @@ static method SetMVParFromArray(aParameters,cPerg,lUpdateSX1) class SX1Tools
         FWFreeArray(@aSX1Parameters)
     endif
 
-    if (ValType(cSv__cInternet)=="C")
-        __cInternet:=cSv__cInternet
-    endif
+    Blind():RestoreBlindMode()
 
 return(lSet)
 
@@ -121,7 +120,6 @@ static method SetMVParFromHashMap(oHMParameters,cPerg,lUpdateSX1) class SX1Tools
     local aSX1Parameters as array
 
     local cMvPar as character
-    local cSv__cInternet:=if(Type("__cInternet")=="C",__cInternet,nil) as character
 
     local bErrorBlock as codeblock
 
@@ -139,6 +137,8 @@ static method SetMVParFromHashMap(oHMParameters,cPerg,lUpdateSX1) class SX1Tools
     paramtype 1 var oHMParameters as object /*class THASHMAP */
     paramtype 2 var cPerg as character optional default ""
     paramtype 3 var lUpdateSX1 as logical optional default .T.
+
+    Blind():SaveBlindMode()
 
     begin sequence
 
@@ -203,9 +203,7 @@ static method SetMVParFromHashMap(oHMParameters,cPerg,lUpdateSX1) class SX1Tools
         FWFreeArray(@aSX1Parameters)
     endif
 
-    if (ValType(cSv__cInternet)=="C")
-        __cInternet:=cSv__cInternet
-    endif
+    Blind():RestoreBlindMode()
 
 return(lSet)
 
