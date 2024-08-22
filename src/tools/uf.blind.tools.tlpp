@@ -34,7 +34,11 @@ static method SetBlindMode(lSetBlind) class Blind
 
     local lIsBlind:=IsBlind() as logical
 
-    paramtype 1 var lSetBlind as logical default lIsBlind
+    paramtype 1 var lSetBlind as logical optional
+
+    if (!ISLOGICAL(lSetBlind))
+        lSetBlind:=ISLOGICAL(lIsBlind)
+    endif
 
     if (!lSetBlind)
         HelpInDark(!lSetBlind)
@@ -79,34 +83,34 @@ static method RestoreBlindMode() class Blind
             break
         endif
 
-        if (valType(s__nBlindMode)!="N")
-            s__nBlindMode:=aScan(s__aBlindMode,{|jStack|jStack["stack"]==cStack})
-            if (s__nBlindMode==0)
+        if (valType(s__nBlindModeAT)!="N")
+            s__nBlindModeAT:=aScan(s__aBlindMode,{|jStack|jStack["stack"]==cStack})
+            if (s__nBlindModeAT==0)
                 break
             endif
-        elseif (s__nBlindMode<=Len(s__aBlindMode))
-            if (s__aBlindMode[s__nBlindMode]["stack"]!=cStack)
-                s__nBlindMode:=aScan(s__aBlindMode,{|jStack|jStack["stack"]==cStack})
-                if (s__nBlindMode==0)
+        elseif (s__nBlindModeAT<=Len(s__aBlindMode))
+            if (s__aBlindMode[s__nBlindModeAT]["stack"]!=cStack)
+                s__nBlindModeAT:=aScan(s__aBlindMode,{|jStack|jStack["stack"]==cStack})
+                if (s__nBlindModeAT==0)
                     break
                 endif
             endif
         endif
 
-        if (ISCHARACTER(s__aBlindMode[s__nBlindMode]["__cInternet"]))
-            __cInternet:=s__aBlindMode[s__nBlindMode]["__cInternet"]
+        if (ISCHARACTER(s__aBlindMode[s__nBlindModeAT]["__cInternet"]))
+            __cInternet:=s__aBlindMode[s__nBlindModeAT]["__cInternet"]
         else
             __cInternet:=NIL
         endif
 
-        if (ISLOGICAL(s__aBlindMode[s__nBlindMode]["lHelpInDark"]))
-            HelpInDark(s__aBlindMode[s__nBlindMode]["lHelpInDark"])
+        if (ISLOGICAL(s__aBlindMode[s__nBlindModeAT]["lHelpInDark"]))
+            HelpInDark(s__aBlindMode[s__nBlindModeAT]["lHelpInDark"])
         endif
 
-        FreeObj(@s__aBlindMode[s__nBlindMode])
-        aDel(s__aBlindMode,s__nBlindMode)
-        s__nBlindMode:=Len(s__aBlindMode)
-        aSize(s__aBlindMode,--s__nBlindMode)
+        FreeObj(@s__aBlindMode[s__nBlindModeAT])
+        aDel(s__aBlindMode,s__nBlindModeAT)
+        s__nBlindModeAT:=Len(s__aBlindMode)
+        aSize(s__aBlindMode,--s__nBlindModeAT)
 
     end sequence
 

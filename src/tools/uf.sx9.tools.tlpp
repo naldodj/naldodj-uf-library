@@ -141,7 +141,7 @@ static method delFromSX9ArrayRelation(cAlias,nRecNo,aArrayRelation,bEvalMessage)
                         aArrayRelation[nRelation]["aArrayRelation"]:=SX9Tools():getSX9ArrayRelation(@cAliasRelation)
                         aArrayRelationItem:=aArrayRelation[nRelation]["aArrayRelation"]
                     endif
-                    lDeleted:=(cAliasRelation)->(SX9Tools():delFromSX9ArrayRelation(cAliasRelation,RecNo(),aArrayRelationItem,bEvalMessage))
+                    lDeleted:=(cAliasRelation)->(SX9Tools():delFromSX9ArrayRelation(cAliasRelation,RecNo(),@aArrayRelationItem,bEvalMessage))
                     Eval(bEvalMessage,cAliasRelation)
                     if (lDeleted)
                         (cAliasRelation)->(dbDelete())
