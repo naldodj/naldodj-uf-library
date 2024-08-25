@@ -23,6 +23,8 @@ class SX9Tools
     static method getSX9ArrayRelation(cAlias as character) as array
     static method delFromSX9ArrayRelation(cAlias as character,nRecNo as numeric,aArrayRelation as array,bEvalMessage as codeblock) as logical
 
+    static method PutSX9Relation(jSX9Relation as json) as logical
+
 end class
 
 static method getSX9ArrayRelation(cAlias) class SX9Tools
@@ -70,6 +72,8 @@ static method getSX9ArrayRelation(cAlias) class SX9Tools
                 jSX9Relation["X9_CDOM"]:=cX9_CDOM
                 jSX9Relation["X9_EXPDOM"]:=cX9_EXPDOM
                 jSX9Relation["X9_EXPCDOM"]:=cX9_EXPCDOM
+                jSX9Relation["X9_IDENT"]:=cX9_EXPCDOM
+                jSX9Relation["R_E_C_N_O_"]:=SX9->(recNo())
                 jSX9Relation["bSeekRelation"]:=&("{||"+cX9_DOM+"->("+cX9_EXPDOM+")}")
                 jSX9Relation["bEvalRelation"]:=&("{||"+cX9_DOM+"->("+cX9_EXPDOM+")=="+cX9_CDOM+"->("+cX9_EXPCDOM+")}")
                 jSX9Relation["nOrderRelation"]:=RetOrder(cX9_CDOM,cX9_EXPCDOM,.T.)
@@ -178,3 +182,90 @@ static method delFromSX9ArrayRelation(cAlias,nRecNo,aArrayRelation,bEvalMessage)
     (cAlias)->(MsGoTo(nRecNo))
 
 return(lDeleted)
+
+static method PutSX9Relation(jSX9Relation) class SX9Tools
+
+    local aArea:=FWGetArea() as array
+    local aAreaSX9:=SX9->(FWGetArea()) as array
+
+    local cSX9EXPDOM as character
+
+    local lSX9Found as logical
+    local lSX9AddNew as logical
+    local lPutSX9Relation:=.T. as logical
+
+    local nSX9Ident,nSX9RecNo as numeric
+
+    paramtype 1 var jSX9Relation as json
+
+    lPutSX9Relation:=lPutSX9Relation.and.jSX9Relation:HasProperty("X9_DOM")
+    lPutSX9Relation:=lPutSX9Relation.and.jSX9Relation:HasProperty("X9_CDOM")
+    lPutSX9Relation:=lPutSX9Relation.and.jSX9Relation:HasProperty("X9_EXPDOM")
+    lPutSX9Relation:=lPutSX9Relation.and.jSX9Relation:HasProperty("X9_EXPCDOM")
+
+    if (lPutSX9Relation)
+        //X9_DOM
+        SX9->(dbSetOrder(1))
+        jSX9Relation["X9_DOM"]:=Upper(jSX9Relation["X9_DOM"])
+        jSX9Relation["X9_CDOM"]:=Upper(jSX9Relation["X9_CDOM"])
+        jSX9Relation["X9_EXPDOM"]:=allTrim(jSX9Relation["X9_EXPDOM"])
+        jSX9Relation["X9_EXPCDOM"]:=allTrim(jSX9Relation["X9_EXPCDOM"])
+        cSX9EXPDOM:=jSX9Relation["X9_EXPDOM"]
+        lSX9Found:=(SX9->(dbSeek(jSX9Relation["X9_DOM"],.F.)))
+        nSX9Ident:=0
+        while (SX9->(!eof().and.(X9_DOM==jSX9Relation["X9_DOM"])))
+            nSX9RecNo:=SX9->(RecNo())
+            cSX9Ident:=SX9->X9_IDENT
+            if ((jSX9Relation:HasProperty("X9_IDENT")).and.(cSX9Ident==jSX9Relation["X9_IDENT"]))
+                lSX9Found:=(SX9->((X9_DOM+X9_CDOM+cSX9Ident)==(jSX9Relation["X9_DOM"]+jSX9Relation["X9_CDOM"]+cSX9Ident)))
+            else
+                lSX9Found:=(SX9->((X9_DOM+X9_CDOM)==(jSX9Relation["X9_DOM"]+jSX9Relation["X9_CDOM"])))
+            endif
+            if (lSX9Found)
+                lSX9Found:=(Upper(allTrim(SX9->X9_EXPDOM))==jSX9Relation["X9_EXPDOM"])
+                lSX9Found:=((lSX9Found).and.(Upper(allTrim(SX9->X9_EXPCDOM))==jSX9Relation["X9_EXPCDOM"]))
+                if ((!lSX9Found).and.(jSX9Relation:HasProperty("X9_IDENT")))
+                    if (SX9->(recLock("SX9",.F.)))
+                        SX9->(dbDelete())
+                        SX9->(MsUnLock())
+                    endif
+                endif
+            endif
+            nSX9Ident:=Max(nSX9Ident,val(cSX9Ident))
+            if (lSX9Found)
+                exit
+            endif
+            SX9->(dbSkip())
+        end while
+        lSX9AddNew:=(!lSX9Found)
+        if (lSX9AddNew)
+            cSX9Ident:=__Soma1(StrZero(nSX9Ident,Len(SX9->X9_IDENT)))
+        else
+            SX9->(MsGoTo(nSX9RecNo))
+        endif
+        lPutSX9Relation:=(SX9->(recLock("SX9",lSX9AddNew)))
+        if (lPutSX9Relation)
+            SX9->X9_DOM:=jSX9Relation["X9_DOM"]
+            SX9->X9_CDOM:=jSX9Relation["X9_CDOM"]
+            SX9->X9_EXPDOM:=cSX9EXPDOM
+            SX9->X9_EXPCDOM:=jSX9Relation["X9_EXPCDOM"]
+            SX9->X9_IDENT:=cSX9Ident
+            SX9->X9_PROPRI:=if(jSX9Relation:HasProperty("X9_PROPRI"),jSX9Relation["X9_EXPCDOM"],"U")
+            SX9->X9_LIGDOM:=if(jSX9Relation:HasProperty("X9_LIGDOM"),jSX9Relation["X9_LIGDOM"],"1")
+            SX9->X9_LIGCDOM:=if(jSX9Relation:HasProperty("X9_LIGCDOM"),jSX9Relation["X9_LIGCDOM"],"N")
+            SX9->X9_CONDSQL:=if(jSX9Relation:HasProperty("X9_CONDSQL"),jSX9Relation["X9_CONDSQL"],"")
+            SX9->X9_USEFIL:=if(jSX9Relation:HasProperty("X9_USEFIL"),jSX9Relation["X9_USEFIL"],"S")
+            SX9->X9_VINFIL:=if(jSX9Relation:HasProperty("X9_VINFIL"),jSX9Relation["X9_VINFIL"],"2")
+            SX9->X9_ENABLE:=if(jSX9Relation:HasProperty("X9_ENABLE"),jSX9Relation["X9_ENABLE"],"S")
+            SX9->X9_CHVFOR:=if(jSX9Relation:HasProperty("X9_CHVFOR"),jSX9Relation["X9_CHVFOR"],"2")
+            SX9->(MsUnLock())
+        endif
+    endif
+
+    FWRestArea(@aAreaSX9)
+    FWRestArea(@aArea)
+
+    FWFreeArray(@aAreaSX9)
+    FWFreeArray(@aArea)
+
+return(lPutSX9Relation)

@@ -41,10 +41,8 @@ static method SetBlindMode(lSetBlind) class Blind
     endif
 
     if (!lSetBlind)
-        HelpInDark(!lSetBlind)
-        if ((Type("__cInternet")=="C").and.(__cInternet=="AUTOMATICO"))
-            __cInternet:=NIL
-        endif
+        HelpInDark(lSetBlind)
+        __cInternet:=NIL
     else
         HelpInDark(lSetBlind)
         __cInternet:="AUTOMATICO"
@@ -55,12 +53,8 @@ return(lIsBlind)
 static method SaveBlindMode() class Blind
 
     local cStack:=ProcName(1) as character
-    local cSv__cInternet as character
-    local lSv__lHelpInDark as logical
 
-    if (Type("__cInternet")=="C")
-        cSv__cInternet:=__cInternet
-    endif
+    local lSv__lHelpInDark as logical
 
     lSv__lHelpInDark:=HelpInDark(.T.)
     HelpInDark(lSv__lHelpInDark)
@@ -68,7 +62,7 @@ static method SaveBlindMode() class Blind
     aAdd(s__aBlindMode,JSONObject():New())
     s__nBlindModeAT:=Len(s__aBlindMode)
     s__aBlindMode[s__nBlindModeAT]["stack"]:=cStack
-    s__aBlindMode[s__nBlindModeAT]["__cInternet"]:=cSv__cInternet
+    s__aBlindMode[s__nBlindModeAT]["__cInternet"]:=if(((Type("__cInternet")=="C").and.(!Empty(__cInternet))),__cInternet,NIL)
     s__aBlindMode[s__nBlindModeAT]["lHelpInDark"]:=lSv__lHelpInDark
 
 return
@@ -98,7 +92,11 @@ static method RestoreBlindMode() class Blind
         endif
 
         if (ISCHARACTER(s__aBlindMode[s__nBlindModeAT]["__cInternet"]))
-            __cInternet:=s__aBlindMode[s__nBlindModeAT]["__cInternet"]
+            if (Empty(s__aBlindMode[s__nBlindModeAT]["__cInternet"]))
+                __cInternet:=NIL
+            else
+                __cInternet:=s__aBlindMode[s__nBlindModeAT]["__cInternet"]
+            endif
         else
             __cInternet:=NIL
         endif
