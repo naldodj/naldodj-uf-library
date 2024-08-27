@@ -32,7 +32,7 @@ static method SetMVParFromArray(aParameters,cPerg,lUpdateSX1) class SX1Tools
 
     local aSX1Parameters as array
 
-    local cMvPar:="MV_PAR00" as character
+    local cMvPar as character
 
     local bErrorBlock as codeblock
 
@@ -65,9 +65,26 @@ static method SetMVParFromArray(aParameters,cPerg,lUpdateSX1) class SX1Tools
                 lError:=.T.
                 break
             endif
+            aSX1Parameters:=SX1Tools():BuildSX1Parameters(@cPerg,@aParameters)
+            nParameters:=Len(aSX1Parameters)
+            if (nParameters>Len(aParameters))
+                for nParameter:=Len(aParameters) To nParameters
+                    cMvPar:=aSX1Parameters[nParameter][14]/*X1_VAR01*/
+                    bErrorBlock:=ErrorBlock({|e|break(e)})
+                    begin sequence
+                        xValue:=&(cMvPar)
+                    recover
+                        xValue:=nil
+                        lError:=.T.
+                    end sequence
+                    ErrorBlock(bErrorBlock)
+                    aAdd(aParameters,xValue)
+                next nParameter
+            endif
         endif
 
         nParameters:=Len(aParameters)
+        cMvPar:="MV_PAR00"
 
         for nParameter:=1 To nParameters
             cMvPar:=__Soma1(cMvPar)
@@ -102,13 +119,13 @@ static method SetMVParFromArray(aParameters,cPerg,lUpdateSX1) class SX1Tools
 
     end sequence
 
-    lSet:=(!lError)
+    lSet:=((!lError).and.(lPerg))
 
     if ((lSet).and.(lUpdateSX1))
-        aSX1Parameters:=SX1Tools():BuildSX1Parameters(@cPerg,@aParameters)
         SX1Tools():SaveMVParIntoSX1(@cPerg,@aSX1Parameters)
-        FWFreeArray(@aSX1Parameters)
     endif
+
+    FWFreeArray(@aSX1Parameters)
 
     Blind():RestoreBlindMode()
 
@@ -128,6 +145,7 @@ static method SetMVParFromHashMap(oHMParameters,cPerg,lUpdateSX1) class SX1Tools
     local lError:=.F. as logical
     local lHelpInDark as logical
 
+    local nMvPar as numeric
     local nParameter as numeric
     local nParameters as numeric
 
@@ -151,11 +169,33 @@ static method SetMVParFromHashMap(oHMParameters,cPerg,lUpdateSX1) class SX1Tools
                 lError:=.T.
                 break
             endif
-        endif
-
-        lPerg:=oHMParameters:List(@aParameters)
-        if (!lPerg)
-            break
+            aSX1Parameters:=SX1Tools():BuildSX1Parameters(@cPerg,@oHMParameters)
+            lPerg:=oHMParameters:List(@aParameters)
+            if (!lPerg)
+                break
+            endif
+            nParameters:=Len(aSX1Parameters)
+            for nParameter:=1 to nParameters
+                cMvPar:=aSX1Parameters[nParameter][14]/*X1_VAR01*/
+                nMvPar:=aScan(aParameters,{|aParMv|Upper(allTrim(aParMv[1]))==cMvPar})
+                if (nMvPar==0)
+                    aAdd(aParameters,Array(2))
+                    nMvPar:=Len(aParameters)
+                    aParameters[nMvPar][1]:=cMvPar
+                    bErrorBlock:=ErrorBlock({|e|break(e)})
+                    begin sequence
+                        xValue:=&(cMvPar)
+                    recover
+                        xValue:=nil
+                        lError:=.T.
+                    end sequence
+                    ErrorBlock(bErrorBlock)
+                    aParameters[nMvPar][2]:=xValue
+                    oHMParameters:Set(aParameters[nMvPar][1],aParameters[nMvPar][2])
+                else
+                    aParameters[nMvPar][1]:=cMvPar
+                endif
+            next nParameter
         endif
 
         aSort(@aParameters,nil,nil,{|x,y|x[1]<y[1]})
@@ -195,13 +235,13 @@ static method SetMVParFromHashMap(oHMParameters,cPerg,lUpdateSX1) class SX1Tools
 
     end sequence
 
-    lSet:=(!lError)
+    lSet:=((!lError).and.(lPerg))
 
     if ((lSet).and.(lUpdateSX1))
-        aSX1Parameters:=SX1Tools():BuildSX1Parameters(@cPerg,@oHMParameters)
         SX1Tools():SaveMVParIntoSX1(@cPerg,@aSX1Parameters)
-        FWFreeArray(@aSX1Parameters)
     endif
+
+    FWFreeArray(@aSX1Parameters)
 
     Blind():RestoreBlindMode()
 
@@ -256,7 +296,7 @@ static method BuildSX1Parameters(cPerg,uParameters) class SX1Tools
                         ,AllTrim(X1Def03());//11
                         ,AllTrim(X1Def04());//12
                         ,AllTrim(X1Def05());//13
-                        ,X1_VAR01;//14
+                        ,Upper(allTrim(X1_VAR01));//14
                         ,if(X1_PRESEL==0,1,X1_PRESEL);//15
                         ,X1_F3;//16
                         ,X1_PICTURE;//17
