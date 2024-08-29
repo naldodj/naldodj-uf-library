@@ -21,8 +21,10 @@ using namespace uf
 
 class MsObjects
 
-    static method FindMsObjects(cMsClassName as character,oWnd as object) as array
+    static method FindMsObjects(cMsClassOrAttrName as character,oWnd as object) as array
     static method FindMsObjectsClassName(oWnd as object)
+    static method FindMsObjectsByAttribute(cAttributeName,oWnd as object) as array
+
     static method GetOctlFocus(oWnd as object) as object
 
 end class
@@ -32,15 +34,15 @@ end class
         Funcao:FindMsObjects
         Autor:Marinaldo de Jesus
         Data:17/04/2011
-        Uso:Retornar Array com os Objetos conforme cMsClassName
-        Sintaxe:MsObjects():FindMsObjects(cMsClassName,oWnd)
+        Uso:Retornar Array com os Objetos conforme cMsClassOrAttrName
+        Sintaxe:MsObjects():FindMsObjects(cMsClassOrAttrName,oWnd)
     /*/
 //------------------------------------------------------------------------------------------------
-static method FindMsObjects(cMsClassName,oWnd) CLASS MsObjects
+static method FindMsObjects(cMsClassOrAttrName,oWnd) CLASS MsObjects
     local aMsObjects as array
-    paramtype 1 var cMsClassName as character
+    paramtype 1 var cMsClassOrAttrName as character
     paramtype 2 var oWnd as object optional default GetWndDefault()
-    aMsObjects:=FindMsObjects(@cMsClassName,@oWnd)
+    aMsObjects:=FindMsObjects(@cMsClassOrAttrName,@oWnd)
     return(aMsObjects)
 
 //------------------------------------------------------------------------------------------------
@@ -58,7 +60,26 @@ static method FindMsObjectsClassName(oWnd) CLASS MsObjects
     paramtype 1 var oWnd as object optional default GetWndDefault()
     aMsObjects:=FindMsObjects("GETCLASSNAME",@oWnd,lOnlyFindClassName)
     return(aMsObjects)
-static function FindMsObjects(cMsClassName as character,oWnd as object,lOnlyFindClassName as logical) as array
+
+//------------------------------------------------------------------------------------------------
+    /*/
+        Funcao:FindMsObjectsByCaption
+        Autor:Marinaldo de Jesus
+        Data:17/04/2011
+        Uso:Retornar Array com as Classes dos Objetos que contem o Texto na propriedade Caption
+        Sintaxe:MsObjects():FindMsObjectsByCaption(cCaptionText,oWnd)
+    /*/
+//------------------------------------------------------------------------------------------------
+static method FindMsObjectsByAttribute(cCaptionText,oWnd) CLASS MsObjects
+    local aMsObjects as array
+    local lOnlyFindClassName:=.F. as logical
+    local lOnlyFindAttributeName:=.T. as logical
+    paramtype 1 var cCaptionText as character
+    paramtype 1 var oWnd as object optional default GetWndDefault()
+    aMsObjects:=FindMsObjects(cCaptionText,@oWnd,lOnlyFindClassName,lOnlyFindAttributeName)
+return(aMsObjects)
+
+static function FindMsObjects(cMsClassOrAttrName as character,oWnd as object,lOnlyFindClassName as logical,lOnlyFindAttributeName as logical) as array
 
     local aMsObjects:=array(0) as array
 
@@ -71,17 +92,21 @@ static function FindMsObjects(cMsClassName as character,oWnd as object,lOnlyFind
 
         dfv():Default(@oWnd,GetWndDefault())
 
-        if (!(ValType(oWnd)=="O"))
+        if (ValType(oWnd)!="O")
             break
         endif
 
-        if (!(ValType(cMsClassName)=="C"))
+        if (ValType(cMsClassOrAttrName)!="C")
             break
         endif
 
-        cMsClassName:=Upper(cMsClassName)
-        aMsObjects:=FindObject(@oWnd,@cMsClassName,@aMsObjects,@lOnlyFindClassName)
-        AddObj(@oWnd,@cMsClassName,@aMsObjects)
+        if (lOnlyFindAttributeName)
+            lOnlyFindClassName:=.F.
+        endif
+
+        cMsClassOrAttrName:=Upper(cMsClassOrAttrName)
+        aMsObjects:=FindObject(@oWnd,@cMsClassOrAttrName,@aMsObjects,@lOnlyFindClassName,@lOnlyFindAttributeName)
+        AddObj(@oWnd,@cMsClassOrAttrName,@aMsObjects,@lOnlyFindClassName,@lOnlyFindAttributeName)
 
     end sequence
     ErrorBlock(bErrorBlock)
@@ -93,10 +118,10 @@ static function FindMsObjects(cMsClassName as character,oWnd as object,lOnlyFind
         Funcao:FindObject
         Autor:Marinaldo de Jesus
         Data:17/04/2011
-        Uso:Retornar Array com os Objetos conforme cMsClassName
+        Uso:Retornar Array com os Objetos conforme cMsClassOrAttrName
     /*/
 //------------------------------------------------------------------------------------------------
-static function FindObject(oWnd as object,cMsClassName as character,aMsObjects as array,lOnlyFindClassName as logical) as array
+static function FindObject(oWnd as object,cMsClassOrAttrName as character,aMsObjects as array,lOnlyFindClassName as logical,lOnlyFindAttributeName as logical) as array
 
     local aChild as array
     local aControls as array
@@ -113,17 +138,24 @@ static function FindObject(oWnd as object,cMsClassName as character,aMsObjects a
 
     dfv():Default(@aMsObjects,array(0))
     dfv():Default(@lOnlyFindClassName,.F.)
+    dfv():Default(@lOnlyFindAttributeName,.F.)
 
     BEGIN SEQUENCE
+
+        if (!AttIsMemberOf(oWnd,"ACONTROLS",.T./*lRecursive*/))
+            break
+        endif
 
         aControls:=oWnd:aControls
 
         if (aControls==nil)
-            AddObj(@oWnd,@cMsClassName,@aMsObjects,@lOnlyFindClassName)
-            oChild:=oWnd:oWnd
-            if !(oChild==nil)
-                AddObj(@oChild,@cMsClassName,@aMsObjects,@lOnlyFindClassName)
-                FindObject(@oChild,@cMsClassName,@aMsObjects,@lOnlyFindClassName)
+            AddObj(@oWnd,@cMsClassOrAttrName,@aMsObjects,@lOnlyFindClassName,@lOnlyFindAttributeName)
+            if (AttIsMemberOf(oWnd,"OWND",.T./*lRecursive*/))
+                oChild:=oWnd:oWnd
+                if (oChild!=nil)
+                    AddObj(@oChild,@cMsClassOrAttrName,@aMsObjects,@lOnlyFindClassName,@lOnlyFindAttributeName)
+                    FindObject(@oChild,@cMsClassOrAttrName,@aMsObjects,@lOnlyFindClassName,@lOnlyFindAttributeName)
+                endif
             endif
             break
         endif
@@ -136,31 +168,34 @@ static function FindObject(oWnd as object,cMsClassName as character,aMsObjects a
             if (oChild==nil)
                 Loop
             endif
-            AddObj(@oChild,@cMsClassName,@aMsObjects,@lOnlyFindClassName)
+            AddObj(@oChild,@cMsClassOrAttrName,@aMsObjects,@lOnlyFindClassName,@lOnlyFindAttributeName)
             bErrorBlock:=ErrorBlock(bError)
             begin sequence
+                if (!AttIsMemberOf(oChild,"ACONTROLS",.T./*lRecursive*/))
+                    break
+                endif
                 aChild:=oChild:aControls
-                if !(aChild==nil)
+                if (aChild!=nil)
                     nChilds:=Len(aChild)
                     For nChild:=1 To nChilds
                         oChild:=aChild[nChild]
-                        if !(oChild==nil)
-                            if (oChild==nil)
-                                Loop
-                            endif
-                            AddObj(@oChild,@cMsClassName,@aMsObjects,@lOnlyFindClassName)
-                            FindObject(@oChild,@cMsClassName,@aMsObjects,@lOnlyFindClassName)
+                        if (oChild==nil)
+                            Loop
                         endif
+                        AddObj(@oChild,@cMsClassOrAttrName,@aMsObjects,@lOnlyFindClassName,@lOnlyFindAttributeName)
+                        FindObject(@oChild,@cMsClassOrAttrName,@aMsObjects,@lOnlyFindClassName,@lOnlyFindAttributeName)
                     Next nChild
                 endif
             end sequence
             ErrorBlock(bErrorBlock)
         Next nControl
 
-        oChild:=oWnd:oWnd
-        if !(oChild==nil)
-            AddObj(@oChild,@cMsClassName,@aMsObjects,lOnlyFindClassName)
-            FindObject(@oChild,@cMsClassName,@aMsObjects,@lOnlyFindClassName)
+        if (AttIsMemberOf(oWnd,"OWND",.T./*lRecursive*/))
+            oChild:=oWnd:oWnd
+            if (oChild!=nil)
+                AddObj(@oChild,@cMsClassOrAttrName,@aMsObjects,@lOnlyFindClassName,@lOnlyFindAttributeName)
+                FindObject(@oChild,@cMsClassOrAttrName,@aMsObjects,@lOnlyFindClassName,@lOnlyFindAttributeName)
+            endif
         endif
 
     END SEQUENCE
@@ -175,7 +210,7 @@ static function FindObject(oWnd as object,cMsClassName as character,aMsObjects a
         Uso:Adicionar o Objeto
     /*/
 //------------------------------------------------------------------------------------------------
-static function AddObj(oObj as object,cMsClassName as character,aMsObjects as array,lOnlyFindClassName as logical) as logical
+static function AddObj(oObj as object,cMsClassOrAttrName as character,aMsObjects as array,lOnlyFindClassName as logical,lOnlyFindAttributeName as logical) as logical
 
     local cClassName as character
 
@@ -183,9 +218,18 @@ static function AddObj(oObj as object,cMsClassName as character,aMsObjects as ar
 
     dfv():Default(@lOnlyFindClassName,.F.)
 
+    if (lOnlyFindAttributeName)
+        lOnlyFindClassName:=.F.
+    endif
+
     cClassName:=Upper(getClassName(oObj))
-    if (!lOnlyFindClassName)
-        lAddObj:=(cClassName==cMsClassName)
+    if (lOnlyFindAttributeName)
+        lAddObj:=AttIsMemberOf(oObj,cMsClassOrAttrName,.T./*lRecursive*/)
+        if (lAddObj)
+            aAdd(aMsObjects,oObj)
+        endif
+    elseif (!lOnlyFindClassName)
+        lAddObj:=(cClassName==cMsClassOrAttrName)
         if (lAddObj)
             if (lAddObj:=(aScan(aMsObjects,{|oFind|oFind==oObj})==0))
                 aAdd(aMsObjects,oObj)
@@ -210,7 +254,7 @@ static method GetOctlFocus(oWnd) class MsObjects
     paramtype 1 var oWnd as object optional
     return(GetOctlFocus(@oWnd))
 
-static function GetOctlFocus(oWnd)
+static function GetOctlFocus(oWnd) as object
 
     local bError as codeblock
     local bErrorBlock as codeblock
@@ -223,11 +267,13 @@ static function GetOctlFocus(oWnd)
 
         dfv():Default(@oWnd,GetWndDefault())
 
-        if (!(ValType(oWnd)=="O"))
+        if (ValType(oWnd)!="O")
             break
         endif
 
-        oCtlFocus:=oWnd:oCtlFocus
+        if (AttIsMemberOf(oWnd,"OCTLFOCUS",.T./*lRecursive*/))
+            oCtlFocus:=oWnd:oCtlFocus
+        endif
 
     end sequence
     ErrorBlock(bErrorBlock)
