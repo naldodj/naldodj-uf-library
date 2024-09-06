@@ -18,9 +18,9 @@ using namespace uf
 
 class ctools
 
-    static method StrTokArray(cString as character,cToken as character,bEvalToken as codeblock) as array
+    static method StrTokArray(cString as character,cToken as character,bEvalToken as codeblock,aStrTokArr as array) as array
 
 end class
 
-static method StrTokArray(cString,cToken,bEvalToken) class ctools
-return(UFTools():StrTokArray(@cString,@cToken,@bEvalToken))
+static method StrTokArray(cString,cToken,bEvalToken,aStrTokArr) class ctools
+return(UFTools():StrTokArray(@cString,@cToken,@bEvalToken,@aStrTokArr))

@@ -20,7 +20,7 @@ using namespace uf
 class UFTools
     static method RetPictVal(nVal as numeric,lDecZero as logical,nInt as numeric,nDec as numeric,lPictSepMil as logical) as character
     static method TextRuler(cText as character,lStep10 as logical) as character
-    static method StrTokArray(cString as character,cToken as character,bEvalToken as codeblock) as array
+    static method StrTokArray(cString as character,cToken as character,bEvalToken as codeblock,aStrTokArr as array) as array
     static method GetAutoGRLog(lKeepErrors as logical,lSanitization as logical) as array
     static method SetBlindMode(lSetBlind as logical) as logical
 end class
@@ -120,9 +120,7 @@ static method TextRuler(cText,lStep10) class UFTools
 
 return(cTextRuler)
 
-static method StrTokArray(cString,cToken,bEvalToken) class UFTools
-
-    local aStrTokArr:=array(0) as array
+static method StrTokArray(cString,cToken,bEvalToken,aStrTokArr) class UFTools
 
     local cStr as character
 
@@ -135,6 +133,7 @@ static method StrTokArray(cString,cToken,bEvalToken) class UFTools
     paramtype 1 var cString as character
     paramtype 2 var cToken as character optional default "+"
     paramtype 3 var bEvalToken as block optional
+    paramtype 4 var aStrTokArr  as array optional default Array(0)
 
     lbEvalToken:=(valType(lbEvalToken)=="B")
 
