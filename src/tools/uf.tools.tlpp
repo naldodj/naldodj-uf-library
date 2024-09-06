@@ -18,11 +18,18 @@ namespace uf
 using namespace uf
 
 class UFTools
+
     static method RetPictVal(nVal as numeric,lDecZero as logical,nInt as numeric,nDec as numeric,lPictSepMil as logical) as character
     static method TextRuler(cText as character,lStep10 as logical) as character
+
     static method StrTokArray(cString as character,cToken as character,bEvalToken as codeblock,aStrTokArr as array) as array
+    static method StrTokCount(cString as character,cToken as character,bEvalToken as codeblock) as numeric
+    static method StrTokCountArray(cString as character,cToken as character,bEvalToken as codeblock) as array
+
     static method GetAutoGRLog(lKeepErrors as logical,lSanitization as logical) as array
+
     static method SetBlindMode(lSetBlind as logical) as logical
+
 end class
 
 static method RetPictVal(nVal,lDecZero,nInt,nDec,lPictSepMil) class UFTools
@@ -157,6 +164,100 @@ static method StrTokArray(cString,cToken,bEvalToken,aStrTokArr) class UFTools
         endif
         if (lAdd)
             aAdd(aStrTokArr,cStr)
+        endif
+    endif
+
+    cStr:=""
+
+return(aStrTokArr)
+
+static method StrTokCount(cString,cToken,bEvalToken) class UFTools
+
+   local cStr as character
+
+    local lTokCount:=.T. as logical
+    local lbEvalToken as logical
+
+    local nATToken as numeric
+    local nRealSize as numeric
+    local nStrTokCount:=0 as numeric
+
+    paramtype 1 var cString as character
+    paramtype 2 var cToken as character optional default "+"
+    paramtype 3 var bEvalToken as block optional
+
+    lbEvalToken:=(valType(lbEvalToken)=="B")
+
+    nRealSize:=Len(cToken)
+    while ((nATToken:=AT(cToken,cString))>0)
+        cStr:=Left(cString,(nATToken-1))
+        if (lbEvalToken)
+            lTokCount:=eval(bEvalToken,@cStr)
+        endif
+        if (lTokCount)
+            nStrTokCount++
+        endif
+        cString:=subStr(cString,(nATToken+nRealSize))
+    end while
+
+    if (Len(cString)>0)
+        cStr:=cString
+        cString:=""
+        if (lbEvalToken)
+            lTokCount:=eval(bEvalToken,@cStr)
+        endif
+        if (lTokCount)
+            nStrTokCount++
+        endif
+    endif
+
+    cStr:=""
+
+return(nStrTokCount)
+
+static method StrTokCountArray(cString,cToken,bEvalToken) class UFTools
+
+    local aStrTokArr as array
+
+    local cStr as character
+
+    local lAdd:=.T. as logical
+    local lbEvalToken as logical
+
+    local nIndex:=0 as numeric
+    local nATToken as numeric
+    local nRealSize as numeric
+    local nStrTokCount as numeric
+
+    paramtype 1 var cString as character
+    paramtype 2 var cToken as character optional default "+"
+    paramtype 3 var bEvalToken as block optional
+
+    nStrTokCount:=UFTools():StrTokCount(cString,cToken,bEvalToken)
+    aStrTokArr:=Array(nStrTokCount)
+
+    lbEvalToken:=(valType(lbEvalToken)=="B")
+
+    nRealSize:=Len(cToken)
+    while ((nATToken:=AT(cToken,cString))>0)
+        cStr:=Left(cString,(nATToken-1))
+        if (lbEvalToken)
+            lAdd:=eval(bEvalToken,@cStr)
+        endif
+        if (lAdd)
+            aStrTokArr[++nIndex]:=cStr
+        endif
+        cString:=subStr(cString,(nATToken+nRealSize))
+    end while
+
+    if (Len(cString)>0)
+        cStr:=cString
+        cString:=""
+        if (lbEvalToken)
+            lAdd:=eval(bEvalToken,@cStr)
+        endif
+        if (lAdd)
+            aStrTokArr[++nIndex]:=cStr
         endif
     endif
 

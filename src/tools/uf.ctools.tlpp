@@ -19,8 +19,16 @@ using namespace uf
 class ctools
 
     static method StrTokArray(cString as character,cToken as character,bEvalToken as codeblock,aStrTokArr as array) as array
+    static method StrTokCount(cString as character,cToken as character,bEvalToken as codeblock) as numeric
+    static method StrTokCountArray(cString as character,cToken as character,bEvalToken as codeblock) as array
 
 end class
 
 static method StrTokArray(cString,cToken,bEvalToken,aStrTokArr) class ctools
 return(UFTools():StrTokArray(@cString,@cToken,@bEvalToken,@aStrTokArr))
+
+static method StrTokCount(cString,cToken,bEvalToken) class ctools
+return(UFTools():StrTokCount(@cString,@cToken,@bEvalToken))
+
+static method StrTokCountArray(cString,cToken,bEvalToken) class ctools
+return(UFTools():StrTokCountArray(@cString,@cToken,@bEvalToken,))
