@@ -437,7 +437,7 @@ method LogAsHtmlFile(cLogFile,cTitle,nError,lLogAsConOutIfError) class Log
         cBuffer:=""
 
         cDetailHeader:=self:FormattedLog("","",.T.)
-        aDetailHeader:=UFTools():StrTokArray(cDetailHeader,__LOG_SEPARETOR_MARK__)
+        aDetailHeader:=UFTools():StrTokCountArray(cDetailHeader,__LOG_SEPARETOR_MARK__)
         nHeaders:=Len(aDetailHeader)
 
         aProperties:=self:jLog:GetNames()
@@ -487,7 +487,7 @@ method LogAsHtmlFile(cLogFile,cTitle,nError,lLogAsConOutIfError) class Log
                     loop
                 endif
                 cDetail:=EncodeUTF8(cDetail)
-                aDetail:=UFTools():StrTokArray(cDetail,__LOG_SEPARETOR_MARK__)
+                aDetail:=UFTools():StrTokCountArray(cDetail,__LOG_SEPARETOR_MARK__)
                 cBuffer:="                                <tr>"
                 cBuffer+=cCRLF
                 if (Len(aDetail)!=nHeaders)

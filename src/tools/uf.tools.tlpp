@@ -7,8 +7,8 @@
 
 
     The source code `uf.tools.tlpp` is based on a more detailed and feature-rich
-    source code, `dna.tech.ctools.tlpp` and `dna.tech.ctools.tlpp`, and implements part of the functionalities
-    present in the latter.
+    source code, `dna.tech.ctools.tlpp` and `others`, and implements part of the functionalities
+    present in both.
 
 */
 #include "totvs.ch"
@@ -129,94 +129,28 @@ return(cTextRuler)
 
 static method StrTokArray(cString,cToken,bEvalToken,aStrTokArr) class UFTools
 
-    local cStr as character
-
-    local lAdd:=.T. as logical
-    local lbEvalToken as logical
-
-    local nATToken as numeric
-    local nRealSize as numeric
+    local lTokCount:=.F. as logical
 
     paramtype 1 var cString as character
     paramtype 2 var cToken as character optional default "+"
     paramtype 3 var bEvalToken as block optional
-    paramtype 4 var aStrTokArr  as array optional default Array(0)
+    paramtype 4 var aStrTokArr as array optional default Array(0)
 
-    lbEvalToken:=(valType(lbEvalToken)=="B")
-
-    nRealSize:=Len(cToken)
-    while ((nATToken:=AT(cToken,cString))>0)
-        cStr:=Left(cString,(nATToken-1))
-        if (lbEvalToken)
-            lAdd:=eval(bEvalToken,@cStr)
-        endif
-        if (lAdd)
-            aAdd(aStrTokArr,cStr)
-        endif
-        cString:=subStr(cString,(nATToken+nRealSize))
-    end while
-
-    if (Len(cString)>0)
-        cStr:=cString
-        cString:=""
-        if (lbEvalToken)
-            lAdd:=eval(bEvalToken,@cStr)
-        endif
-        if (lAdd)
-            aAdd(aStrTokArr,cStr)
-        endif
-    endif
-
-    cStr:=""
+    aStrTokArr:=strToKArray(@cString,cToken,bEvalToken,aStrTokArr,lTokCount)
 
 return(aStrTokArr)
 
 static method StrTokCount(cString,cToken,bEvalToken) class UFTools
 
-    local cStr,cStringNew:="" as character
-
     local lTokCount:=.T. as logical
-    local lbEvalToken as logical
 
-    local nATToken as numeric
-    local nRealSize as numeric
     local nStrTokCount:=0 as numeric
 
     paramtype 1 var cString as character
     paramtype 2 var cToken as character optional default "+"
     paramtype 3 var bEvalToken as block optional
 
-    lbEvalToken:=(valType(lbEvalToken)=="B")
-
-    nRealSize:=Len(cToken)
-    while ((nATToken:=AT(cToken,cString))>0)
-        cStr:=Left(cString,(nATToken-1))
-        if (lbEvalToken)
-            lTokCount:=eval(bEvalToken,@cStr)
-        endif
-        if (lTokCount)
-            nStrTokCount++
-            cStringNew+=cStr
-            cStringNew+=cToken
-        endif
-        cString:=subStr(cString,(nATToken+nRealSize))
-    end while
-
-    if (Len(cString)>0)
-        cStr:=cString
-        cString:=""
-        if (lbEvalToken)
-            lTokCount:=eval(bEvalToken,@cStr)
-        endif
-        if (lTokCount)
-            nStrTokCount++
-            cStringNew+=cStr
-        endif
-    endif
-
-    cStr:=""
-    cString:=cStringNew
-    cStringNew:=""
+    nStrTokCount:=strToKArray(@cString,cToken,bEvalToken,aStrTokArr,lTokCount)
 
 return(nStrTokCount)
 
@@ -253,6 +187,57 @@ static method StrTokCountArray(cString,cToken,bEvalToken) class UFTools
     cString:=""
 
 return(aStrTokArr)
+
+static function strToKArray(cString,cToken,bEvalToken,aStrTokArr,lTokCount) as variant
+
+    local cStr,cStringNew as character
+
+    local lAdd:=.T. as logical
+    local lbEvalToken:=(valType(lbEvalToken)=="B") as logical
+
+    local nATToken as numeric
+    local nRealSize as numeric
+    local nStrTokCount:=0 as numeric
+
+    nRealSize:=Len(cToken)
+    while ((nATToken:=AT(cToken,cString))>0)
+        cStr:=Left(cString,(nATToken-1))
+        if (lbEvalToken)
+            lAdd:=eval(bEvalToken,@cStr)
+        endif
+        if (lAdd)
+            if (lTokCount)
+                nStrTokCount++
+            else
+                aAdd(aStrTokArr,cStr)
+            endif
+            cStringNew+=cStr
+            cStringNew+=cToken
+        endif
+        cString:=subStr(cString,(nATToken+nRealSize))
+    end while
+
+    if (Len(cString)>0)
+        cStr:=cString
+        cString:=""
+        if (lbEvalToken)
+            lAdd:=eval(bEvalToken,@cStr)
+        endif
+        if (lAdd)
+            if (lTokCount)
+                nStrTokCount++
+            else
+                aAdd(aStrTokArr,cStr)
+            endif
+            cStringNew+=cStr
+        endif
+    endif
+
+    cStr:=""
+    cString:=cStringNew
+    cStringNew:=""
+
+return(if(lTokCount,nStrTokCount,aStrTokArr))
 
 static method GetAutoGRLog(lKeepErrors,lSanitization) class UFTools
     local __aErrAuto as array
