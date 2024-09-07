@@ -173,7 +173,7 @@ return(aStrTokArr)
 
 static method StrTokCount(cString,cToken,bEvalToken) class UFTools
 
-   local cStr as character
+    local cStr,cStringNew:="" as character
 
     local lTokCount:=.T. as logical
     local lbEvalToken as logical
@@ -196,6 +196,8 @@ static method StrTokCount(cString,cToken,bEvalToken) class UFTools
         endif
         if (lTokCount)
             nStrTokCount++
+            cStringNew+=cStr
+            cStringNew+=cToken
         endif
         cString:=subStr(cString,(nATToken+nRealSize))
     end while
@@ -208,10 +210,13 @@ static method StrTokCount(cString,cToken,bEvalToken) class UFTools
         endif
         if (lTokCount)
             nStrTokCount++
+            cStringNew+=cStr
         endif
     endif
 
     cStr:=""
+    cString:=cStringNew
+    cStringNew:=""
 
 return(nStrTokCount)
 
@@ -220,9 +225,6 @@ static method StrTokCountArray(cString,cToken,bEvalToken) class UFTools
     local aStrTokArr as array
 
     local cStr as character
-
-    local lAdd:=.T. as logical
-    local lbEvalToken as logical
 
     local nIndex:=0 as numeric
     local nATToken as numeric
@@ -233,35 +235,22 @@ static method StrTokCountArray(cString,cToken,bEvalToken) class UFTools
     paramtype 2 var cToken as character optional default "+"
     paramtype 3 var bEvalToken as block optional
 
-    nStrTokCount:=UFTools():StrTokCount(cString,cToken,bEvalToken)
+    nStrTokCount:=UFTools():StrTokCount(@cString,cToken,bEvalToken)
     aStrTokArr:=Array(nStrTokCount)
-
-    lbEvalToken:=(valType(lbEvalToken)=="B")
 
     nRealSize:=Len(cToken)
     while ((nATToken:=AT(cToken,cString))>0)
         cStr:=Left(cString,(nATToken-1))
-        if (lbEvalToken)
-            lAdd:=eval(bEvalToken,@cStr)
-        endif
-        if (lAdd)
-            aStrTokArr[++nIndex]:=cStr
-        endif
+        aStrTokArr[++nIndex]:=cStr
         cString:=subStr(cString,(nATToken+nRealSize))
     end while
 
     if (Len(cString)>0)
-        cStr:=cString
-        cString:=""
-        if (lbEvalToken)
-            lAdd:=eval(bEvalToken,@cStr)
-        endif
-        if (lAdd)
-            aStrTokArr[++nIndex]:=cStr
-        endif
+        aStrTokArr[++nIndex]:=cString
     endif
 
     cStr:=""
+    cString:=""
 
 return(aStrTokArr)
 
