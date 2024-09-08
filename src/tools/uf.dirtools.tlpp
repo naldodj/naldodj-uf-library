@@ -26,7 +26,7 @@ class dirtools
 
     static method DirRemove(cDirRoot as character,cDirRemove as character) as logical
 
-    static method BrowseFiles(cTitle as character,cDirectory as character,cMask as character,nTypeOrder as numeric,bLDblClick as codeblock,bCustomHeaderClick as codeblock,aCustomButtons as array) as variant
+    static method BrowseFiles(cTitle as character,cDirectory as character,cMask as character,nTypeOrder as numeric,bLDblClick as codeblock,bCustomHeaderClick as codeblock,aCustomButtons as array,cAttribute as character) as variant
 
 end class
 
@@ -131,7 +131,7 @@ static method DirRemove(cDirRoot,cDirRemove) class dirtools
 
     return(lDirRemove)
 
-static method BrowseFiles(cTitle,cDirectory,cMask,nTypeOrder,bLDblClick,bCustomHeaderClick,aCustomButtons) class dirtools
+static method BrowseFiles(cTitle,cDirectory,cMask,nTypeOrder,bLDblClick,bCustomHeaderClick,aCustomButtons,cAttribute) class dirtools
     paramtype 1 var cTitle as character
     paramtype 2 var cDirectory as character
     paramtype 3 var cMask as character
@@ -139,7 +139,8 @@ static method BrowseFiles(cTitle,cDirectory,cMask,nTypeOrder,bLDblClick,bCustomH
     paramtype 5 var bLDblClick as block optional default {|oSelf|}
     paramtype 6 var bCustomHeaderClick as block optional default {|oSelf|}
     paramtype 7 var aCustomButtons as array optional default array(0)
-return(BrowseFiles(cTitle,cDirectory,cMask,nTypeOrder,bLDblClick,bCustomHeaderClick,aCustomButtons))
+    paramtype 8 var cAttribute as character optional
+return(BrowseFiles(cTitle,cDirectory,cMask,nTypeOrder,bLDblClick,bCustomHeaderClick,aCustomButtons,cAttribute))
 
 static function DirMake(cDirMake as character,cDrive as character,cPath as character,cFile as character,cExt as character) as logical
 
@@ -244,7 +245,7 @@ static function RemoveDir(cRootDir,cRemoveDir as character,cDrive as character,c
 
     return(lRemoveDir)
 
-static function BrowseFiles(cTitle as character,cDirectory as character,cMask as character,nTypeOrder as numeric,bLDblClick as codeblock,bCustomHeaderClick as codeblock,aCustomButtons as array) as variant
+static function BrowseFiles(cTitle as character,cDirectory as character,cMask as character,nTypeOrder as numeric,bLDblClick as codeblock,bCustomHeaderClick as codeblock,aCustomButtons as array,cAttribute as character) as variant
 
     local aFWBrwSeek as array
     local aFWBrwData as array
@@ -260,6 +261,7 @@ static function BrowseFiles(cTitle as character,cDirectory as character,cMask as
     local cLDblClick as character
     local cCustomHeaderClick as character
 
+    local lFWIsAdmin:=FWIsAdmin() as logical
     local lRedefineBottom:=(FWIsInCallStack("UF.EXECUTE").or.FwIsInCallStack("DNA.TECH.EXECUTE")) as logical
 
     local nField,nFields as numeric
@@ -271,7 +273,7 @@ static function BrowseFiles(cTitle as character,cDirectory as character,cMask as
 
     begin sequence
 
-        aFWBrwData:=BrowseFilesGetFiles(cDirectory,cMask,nTypeOrder)
+        aFWBrwData:=BrowseFilesGetFiles(cDirectory,cMask,nTypeOrder,cAttribute)
 
         aFWBrwSeek:=array(0)
         aFWBrwModel:=array(0)
@@ -281,7 +283,7 @@ static function BrowseFiles(cTitle as character,cDirectory as character,cMask as
 
         aFWGetDialogSizeCoors:=FWGetDialogSize()
 
-        aAdd(aFWBrwModel,{"Arquivo",'@!',254,0,1,"C"})
+        aAdd(aFWBrwModel,{if(cAttribute=="D","Diretório","Arquivo"),'@!',254,0,1,"C"})
         aAdd(aFWBrwModel,{"Tamanho",'9999999999999999',16,0,1,"N"})
         aAdd(aFWBrwModel,{"Data",'@D',8,0,1,"D"})
         aAdd(aFWBrwModel,{"Hora",'@!',8,0,1,"C"})
@@ -350,21 +352,39 @@ static function BrowseFiles(cTitle as character,cDirectory as character,cMask as
         oFWBrowse:SetUseFilter()
         oFWBrowse:SetFieldFilter(aFWBrwFilter)
 
-        bSetDelete:={|oSelf|;
-            if(;
-                (;
-                    (fErase(cDirectory+aFWBrwData[oSelf:AT()][F_NAME])==0);
-                    .and.;
-                    (!File(cDirectory+aFWBrwData[oSelf:AT()][F_NAME])),;
-                ),;
-                (;
-                    aDel(aFWBrwData,oSelf:AT()),;
-                    aSize(aFWBrwData,Len(aFWBrwData)-1),;
-                    .T.;
-                ),;
-                .F.;
-            );
-        }
+        if (cAttribute=="D")
+            bSetDelete:={|oSelf|;
+                if(;
+                    (;
+                        dirTools():DirRemove(cDirectory,aFWBrwData[oSelf:AT()][F_NAME],.T.);
+                        .and.;
+                        (!lIsDir(cDirectory+aFWBrwData[oSelf:AT()][F_NAME])),;
+                    ),;
+                    (;
+                        aDel(aFWBrwData,oSelf:AT()),;
+                        aSize(aFWBrwData,Len(aFWBrwData)-1),;
+                        .T.;
+                    ),;
+                    .F.;
+                );
+            }
+        else
+            bSetDelete:={|oSelf|;
+                if(;
+                    (;
+                        (fErase(cDirectory+aFWBrwData[oSelf:AT()][F_NAME])==0);
+                        .and.;
+                        (!File(cDirectory+aFWBrwData[oSelf:AT()][F_NAME])),;
+                    ),;
+                    (;
+                        aDel(aFWBrwData,oSelf:AT()),;
+                        aSize(aFWBrwData,Len(aFWBrwData)-1),;
+                        .T.;
+                    ),;
+                    .F.;
+                );
+            }
+        endif
         oFWBrowse:SetDelete(.T.,bSetDelete)
 
         if (valtype(bLDblClick)!="B")
@@ -429,26 +449,30 @@ static function BrowseFiles(cTitle as character,cDirectory as character,cMask as
             .T.;//[n][7] ?
         )
 
-        oFWDialogModal:AddButton(;
-            "&Excluir",;//[n][1] cTitle Titulo do Botao
-                {||;
-                    if(;
-                        (;
-                            ApMsgNoYes("Deseja Excluir o Arquivo?","Atenção!");
-                        ),;
-                        (;
-                            oFWBrowse:DelLine(),;
-                            oFWBrowse:Refresh(.F.);
-                        ),;
-                        nil;
-                    );
-                },;//[n][2] bBloco Bloco de codigo que sera executado
-                "Excluir",;//[n][3] cToolTip Comentario do botao
-                nil,;//[n][4] nShortCut Tecla para se criar o ShortCurt
-                .T.,;//[n][5] lShowBar Indica que o botao estara visivel na barra
-                .F.,;//[n][6] lConfig Indica se botao estara visivel na configuracao
-                .T.;//[n][7] ?
-            )
+        if (lFWIsAdmin)
+
+            oFWDialogModal:AddButton(;
+                "&Excluir",;//[n][1] cTitle Titulo do Botao
+                    {||;
+                        if(;
+                            (;
+                                ApMsgNoYes("Deseja Excluir o Arquivo?","Atenção!");
+                            ),;
+                            (;
+                                oFWBrowse:DelLine(),;
+                                oFWBrowse:Refresh(.F.);
+                            ),;
+                            nil;
+                        );
+                    },;//[n][2] bBloco Bloco de codigo que sera executado
+                    "Excluir",;//[n][3] cToolTip Comentario do botao
+                    nil,;//[n][4] nShortCut Tecla para se criar o ShortCurt
+                    .T.,;//[n][5] lShowBar Indica que o botao estara visivel na barra
+                    .F.,;//[n][6] lConfig Indica se botao estara visivel na configuracao
+                    .T.;//[n][7] ?
+                )
+
+        endif
 
         oFWDialogModal:AddButton(;
             "&Atualizar",;//[n][1] cTitle Titulo do Botao
@@ -458,7 +482,7 @@ static function BrowseFiles(cTitle as character,cDirectory as character,cMask as
                         "Atualizando arquivos. Aguarde...",;
                         {||;
                             FWFreeArray(@aFWBrwData),;
-                            aFWBrwData:=BrowseFilesGetFiles(cDirectory,cMask,nTypeOrder),;
+                            aFWBrwData:=BrowseFilesGetFiles(cDirectory,cMask,nTypeOrder,cAttribute),;
                             oFWBrowse:SetArray(aFWBrwData),;
                             oFWBrowse:Refresh(.F.);
                         };
@@ -476,13 +500,13 @@ static function BrowseFiles(cTitle as character,cDirectory as character,cMask as
                 if (len(aCustomButtons[nButton])>=7)
                     oFWDialogModal:AddButton(;
                         aCustomButtons[nButton][1],;//[n][1] cTitle Titulo do Botao
-                        aCustomButtons[nButton][2],;//[n][2] bBloco Bloco de codigo que sera executado
+                        &(GetCBSource(aCustomButtons[nButton][2])),;//[n][2] bBloco Bloco de codigo que sera executado
                         aCustomButtons[nButton][3],;//[n][3] cToolTip Comentario do botao
-                            nil,;//[n][4] nShortCut Tecla para se criar o ShortCurt
-                            .T.,;//[n][5] lShowBar Indica que o botao estara visivel na barra
-                            .F.,;//[n][6] lConfig Indica se botao estara visivel na configuracao
-                            .T.;//?
-                        )
+                        aCustomButtons[nButton][4],;//[n][4] nShortCut Tecla para se criar o ShortCurt
+                        aCustomButtons[nButton][5],;//[n][5] lShowBar Indica que o botao estara visivel na barra
+                        aCustomButtons[nButton][6],;//[n][6] lConfig Indica se botao estara visivel na configuracao
+                        aCustomButtons[nButton][7];//?
+                    )
                 endif
             next nButton
 
@@ -505,8 +529,17 @@ static function BrowseFiles(cTitle as character,cDirectory as character,cMask as
 
 return(nil)
 
-static function BrowseFilesGetFiles(cDirectory as character,cMask as character,nTypeOrder as numeric) as array
+static function BrowseFilesGetFiles(cDirectory as character,cMask as character,nTypeOrder as numeric,cAttribute as character) as array
     local aFiles as array
+    local nFile,nFiles as numeric
     DEFAULT nTypeOrder:=1
-    aFiles:=Directory(cDirectory+cMask/*cDirEsp*/,nil/*cAtributos*/,nil/*uParam1*/,nil/*lCaseSensitive*/,nTypeOrder/*nTypeOrder*/)
+    aFiles:=Directory(cDirectory+cMask/*cDirEsp*/,cAttribute/*cAtributos*/,nil/*uParam1*/,nil/*lCaseSensitive*/,nTypeOrder/*nTypeOrder*/)
+    if (cAttribute=="D")
+        nFile:=0
+        nFiles:=Len(aFiles)
+        while ((nFile:=aScan(aFiles,{|x|((x[F_ATTR]!="D").or.(x[F_NAME]==".").or.(x[F_NAME]==".."))},++nFile))>0)
+            aDel(aFiles,nFile--)
+            aSize(aFiles,(--nFiles))
+        end while
+    endif
 return(aFiles)
