@@ -30,6 +30,7 @@ class TextView
     static method ShowHtml(cHTML as character,cTitle as character,cHTMLTempFile as character,cBaseURL as character) as logical
     static method ShowHTMLXML(cXML as character,cTitle as character,lPrismJS as logical) as logical
     static method ShowHTMLJSON(cJSON as character,cTitle as character,lPrismJS as logical) as logical
+    static method ShowHTMLText(cText as character,cTitle as character) as logical
     static method ShowHTMLRESTAPI(cTitle as character,lAjax as logical) as logical
 
     static method GetOS() as character
@@ -118,8 +119,15 @@ static method Show(xMsg,cTitulo,cLabel,aButtons,bValid,lQuebraLinha,lSoExibeMsg,
                     cMsg:=strTran(cMsg,cRulerMemoEdit,""),;
                     UFNotepad(.F.,cMsg,cFile),;
                     cMsg:=cRulerMemoEdit+cMsg;
-                },"NotePad"})
+                },"&NotePad"};
+            )
         endif
+
+        aAdd(aButtons,{"Browse",;
+            {||;
+                TextView():ShowHTMLText(cMsg,cTitulo),;
+            },"&Browse"};
+        )
 
         cType:=ValType(xMsg)
         if (cType=="C")
@@ -405,6 +413,25 @@ static method ShowHTMLJSON(cJSON,cTitle,lPrismJS) class TextView
 
 return(lShowHTMLJSON)
 
+static method ShowHTMLText(cText,cTitle) class TextView
+
+    local cURL as character
+    local cHTML as character
+    local cBaseURL as character
+    local lShowHTMLText as logical
+
+    paramtype 1 var cText as character optional default ""
+    paramtype 2 var cTitle as character optional default ""
+
+    cURL:=UFMakeHTMLTextView(@cText,@cTitle,@cHTML,@cBaseURL)
+
+    lShowHTMLText:=!Empty(cURL)
+    if (lShowHTMLText)
+        showHTML(@cHTML,@cTitle,@cURL,@cBaseURL)
+    endif
+
+return(lShowHTMLText)
+
 static method ShowHTMLRESTAPI(cTitle,lAjax) class TextView
 
     local cURL as character
@@ -529,7 +556,7 @@ static function UFMakeHTMLXMLView(cXML as character,cTitle as character,cHTML as
 <body>
 
     <div class="container-fluid">
-        <h1>cTitle</h1>
+        <h5>cTitle</h5>
         <div id="XML-container" class="code mt-4">
     </div>
 
@@ -662,7 +689,7 @@ static function UFMakeHTMLJSONView(cJSON as character,cTitle as character,cHTML 
 <body>
 
     <div class="container-fluid">
-        <h1>cTitle</h1>
+        <h5>cTitle</h5>
         <div id="json-container" class="mt-4">
     </div>
 
@@ -733,7 +760,7 @@ static function UFMakeHTMLJSONView(cJSON as character,cTitle as character,cHTML 
 <body>
 
     <div class="container-fluid">
-        <h1>cTitle</h1>
+        <h5>cTitle</h5>
         <div id="json-container" class="code mt-4">
     </div>
 
@@ -787,6 +814,98 @@ static function UFMakeHTMLJSONView(cJSON as character,cTitle as character,cHTML 
     end sequence
 
     FreeObj(@jMemo)
+
+    DelClassIntF()
+
+return(cURL)
+
+static function UFMakeHTMLTextView(cText as character,cTitle as character,cHTML as character,cBaseURL as character) as character
+
+    local cURL as character
+
+    local cTmpFile as character
+
+    begin sequence
+
+        cBaseURL:="https://cdn.jsdelivr.net/npm/bootstrap/dist/css/bootstrap.min.css"
+
+        beginContent var cHTML
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <title>cTitle</title>
+    <style>
+        body {
+            padding: 20px;
+        }
+        pre {outline: 1px solid #ccc; padding: 5px; margin: 5px; background-color: #ccc; }
+        .number {
+            color: #333333; /* Cinza Escuro */
+        }
+        .letter {
+            color: #1E90FF; /* Azul */
+        }
+        .other {
+            color: #FFA500; /* Laranja */
+        }
+    </style>
+</head>
+<body>
+    <textarea id="inputText" rows="0" cols="0" placeholder="Enter text" style="display:none;">
+cText
+    </textarea>
+    <div class="container-fluid badge bg-secondary text-nowrap font-monospace">
+        <h5>cTitle</h5>
+        <pre><code id="outputText"></code></pre>
+    </div>
+    <script>
+        function colorizeText() {
+            var input = document.getElementById('inputText').value;
+            var output = document.getElementById('outputText');
+            output.innerHTML = '';
+            for (var i = 0; i < input.length; i++) {
+                var span = document.createElement('span');
+                if (!isNaN(input[i]) && input[i] !== ' ') {
+                    span.className = 'number';
+                } else if (/[a-zA-Z]/.test(input[i])) {
+                    span.className = 'letter';
+                } else {
+                    span.className = 'other';
+                }
+                span.textContent = input[i];
+                output.appendChild(span);
+            }
+        }
+        colorizeText();
+    </script>
+    <!-- bootstrap -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core/dist/umd/popper.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
+</body>
+</html>
+        endContent
+
+        cHTML:=StrTran(cHTML,"cTitle",cTitle)
+        cHTML:=StrTran(cHTML,"cText",cText)
+
+        cTmpFile:=GetTempPath()
+        cTmpFile+=CriaTrab(nil,.F.)+".html"
+
+        if (!MemoWrite(cTmpFile,cHTML))
+            break
+        endif
+
+        cURL:=""
+        cURL+="file:///"
+        cURL+=cTmpFile
+        cURL:=strTran(cURL,"\","/")
+
+    end sequence
 
     DelClassIntF()
 
@@ -976,7 +1095,7 @@ function realizarChamadaAPI(verb) {
     <body>
 
     <div class="container">
-      <h2>Teste de API REST</h2>
+      <h5>Teste de API REST</h5>
 
       <div class="form-group">
         <label for="endpoint">Endpoint:</label>
