@@ -860,7 +860,7 @@ static function UFMakeHTMLTextView(cText as character,cTitle as character,cHTML 
     </style>
 </head>
 <body>
-    <textarea id="inputText" rows="0" cols="0" placeholder="Enter text" style="display:none;">
+    <textarea id="inputText" rows="0" cols="0" style="display:none;">
 cText
     </textarea>
     <div class="container-fluid badge bg-secondary text-nowrap font-monospace">
