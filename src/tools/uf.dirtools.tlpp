@@ -26,7 +26,7 @@ class dirtools
 
     static method DirRemove(cDirRoot as character,cDirRemove as character) as logical
 
-    static method BrowseFiles(cTitle as character,cDirectory as character,cMask as character,nTypeOrder as numeric,bLDblClick as codeblock,bCustomHeaderClick as codeblock,aCustomButtons as array,cAttribute as character) as variant
+    static method BrowseFiles(/*@*/oFWBrowse as object,/*@*/aFWBrwData as array,cTitle as character,cDirectory as character,cMask as character,nTypeOrder as numeric,bLDblClick as codeblock,bCustomHeaderClick as codeblock,aCustomButtons as array,cAttribute as character) as variant
 
 end class
 
@@ -131,16 +131,18 @@ static method DirRemove(cDirRoot,cDirRemove) class dirtools
 
     return(lDirRemove)
 
-static method BrowseFiles(cTitle,cDirectory,cMask,nTypeOrder,bLDblClick,bCustomHeaderClick,aCustomButtons,cAttribute) class dirtools
-    paramtype 1 var cTitle as character
-    paramtype 2 var cDirectory as character
-    paramtype 3 var cMask as character
-    paramtype 4 var nTypeOrder as numeric optional default 1
-    paramtype 5 var bLDblClick as block optional default {|oSelf|}
-    paramtype 6 var bCustomHeaderClick as block optional default {|oSelf|}
-    paramtype 7 var aCustomButtons as array optional default array(0)
-    paramtype 8 var cAttribute as character optional
-return(BrowseFiles(cTitle,cDirectory,cMask,nTypeOrder,bLDblClick,bCustomHeaderClick,aCustomButtons,cAttribute))
+static method BrowseFiles(/*@*/oFWBrowse,/*@*/aFWBrwData,cTitle,cDirectory,cMask,nTypeOrder,bLDblClick,bCustomHeaderClick,aCustomButtons,cAttribute) class dirtools
+    paramtype 1 var oFWBrowse as object optional
+    paramtype 2 var aFWBrwData as array optional
+    paramtype 3 var cTitle as character
+    paramtype 4 var cDirectory as character
+    paramtype 5 var cMask as character
+    paramtype 6 var nTypeOrder as numeric optional default 1
+    paramtype 7 var bLDblClick as block optional default {|oSelf|}
+    paramtype 8 var bCustomHeaderClick as block optional default {|oSelf|}
+    paramtype 9 var aCustomButtons as array optional default array(0)
+    paramtype 10 var cAttribute as character optional
+return(BrowseFiles(@oFWBrowse,@aFWBrwData,@cTitle,@cDirectory,@cMask,@nTypeOrder,@bLDblClick,@bCustomHeaderClick,@aCustomButtons,@cAttribute))
 
 static function DirMake(cDirMake as character,cDrive as character,cPath as character,cFile as character,cExt as character) as logical
 
@@ -245,10 +247,9 @@ static function RemoveDir(cRootDir,cRemoveDir as character,cDrive as character,c
 
     return(lRemoveDir)
 
-static function BrowseFiles(cTitle as character,cDirectory as character,cMask as character,nTypeOrder as numeric,bLDblClick as codeblock,bCustomHeaderClick as codeblock,aCustomButtons as array,cAttribute as character) as variant
+static function BrowseFiles(/*@*/oFWBrowse as object,/*@*/aFWBrwData as array,cTitle as character,cDirectory as character,cMask as character,nTypeOrder as numeric,bLDblClick as codeblock,bCustomHeaderClick as codeblock,aCustomButtons as array,cAttribute as character) as variant
 
     local aFWBrwSeek as array
-    local aFWBrwData as array
     local aFWBrwModel as array
     local aFWBrwFilter as array
     local aFWBrwColumn as array
@@ -258,16 +259,12 @@ static function BrowseFiles(cTitle as character,cDirectory as character,cMask as
 
     local bSetDelete as codeblock
 
-    local cLDblClick as character
-    local cCustomHeaderClick as character
-
     local lFWIsAdmin:=FWIsAdmin() as logical
     local lRedefineBottom:=(FWIsInCallStack("UF.EXECUTE").or.FwIsInCallStack("DNA.TECH.EXECUTE")) as logical
 
     local nField,nFields as numeric
     local nButton,nButtons as numeric
 
-    local oFWBrowse as object
     local oPanelMain as object
     local oFWDialogModal as object
 
@@ -389,17 +386,11 @@ static function BrowseFiles(cTitle as character,cDirectory as character,cMask as
 
         if (valtype(bLDblClick)!="B")
             bLDblClick:={|oSelf|}
-        else
-            cLDblClick:=GetCBSource(bLDblClick)
-            bLDblClick:=&(cLDblClick)
         endif
         oFWBrowse:SetDoubleClick(bLDblClick)
 
         if (valType(bCustomHeaderClick)!="B")
             bCustomHeaderClick:={|oSelf|}
-        else
-            cCustomHeaderClick:=GetCBSource(bCustomHeaderClick)
-            bCustomHeaderClick:=&(cCustomHeaderClick)
         endif
         oFWBrowse:bCustomHeaderClick:=bCustomHeaderClick
 
@@ -500,7 +491,7 @@ static function BrowseFiles(cTitle as character,cDirectory as character,cMask as
                 if (len(aCustomButtons[nButton])>=7)
                     oFWDialogModal:AddButton(;
                         aCustomButtons[nButton][1],;//[n][1] cTitle Titulo do Botao
-                        &(GetCBSource(aCustomButtons[nButton][2])),;//[n][2] bBloco Bloco de codigo que sera executado
+                        aCustomButtons[nButton][2],;//[n][2] bBloco Bloco de codigo que sera executado
                         aCustomButtons[nButton][3],;//[n][3] cToolTip Comentario do botao
                         aCustomButtons[nButton][4],;//[n][4] nShortCut Tecla para se criar o ShortCurt
                         aCustomButtons[nButton][5],;//[n][5] lShowBar Indica que o botao estara visivel na barra
