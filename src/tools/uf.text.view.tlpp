@@ -18,9 +18,6 @@
 #include "parmtype.ch"
 #include "tlpp-core.th"
 
-static __aAccentuation as array
-static __nAccentuation as numeric
-
 namespace uf
 using namespace uf
 
@@ -388,7 +385,7 @@ static method ShowHTMLXML(cXML,cTitle,lPrismJS) class TextView
 
     lShowHTMLXML:=!Empty(cURL)
     if (lShowHTMLXML)
-        UFJShowHTML(@cHTML,@cTitle,@cURL,@cBaseURL)
+        UFShowHTML(@cHTML,@cTitle,@cURL,@cBaseURL)
     endif
 
 return(lShowHTMLXML)
@@ -408,7 +405,7 @@ static method ShowHTMLJSON(cJSON,cTitle,lPrismJS) class TextView
 
     lShowHTMLJSON:=!Empty(cURL)
     if (lShowHTMLJSON)
-        UFJShowHTML(@cHTML,@cTitle,@cURL,@cBaseURL)
+        UFShowHTML(@cHTML,@cTitle,@cURL,@cBaseURL)
     endif
 
 return(lShowHTMLJSON)
@@ -427,7 +424,7 @@ static method ShowHTMLText(cText,cTitle) class TextView
 
     lShowHTMLText:=!Empty(cURL)
     if (lShowHTMLText)
-        showHTML(@cHTML,@cTitle,@cURL,@cBaseURL)
+        UFShowHTML(@cHTML,@cTitle,@cURL,@cBaseURL)
     endif
 
 return(lShowHTMLText)
@@ -446,7 +443,7 @@ static method ShowHTMLRESTAPI(cTitle,lAjax) class TextView
 
     lhtmlRESTAPIShow:=!Empty(cURL)
     if (lhtmlRESTAPIShow)
-        UFJShowHTML(@cHTML,@cTitle,@cURL,@cBaseURL)
+        UFShowHTML(@cHTML,@cTitle,@cURL,@cBaseURL)
     endif
 
 return(lhtmlRESTAPIShow)
@@ -489,7 +486,7 @@ static method GetOS() class TextView
 
 return(cOS)
 
-static function UFJShowHTML(cHTML as character,cTitle as character,cHTMLTempFile as character,cBaseURL as character) as logical
+static function UFShowHTML(cHTML as character,cTitle as character,cHTMLTempFile as character,cBaseURL as character) as logical
 return(UF.TextView():ShowHTML(cHTML,cTitle,cHTMLTempFile,cBaseURL))
 
 static function UFMakeHTMLXMLView(cXML as character,cTitle as character,cHTML as character,cBaseURL as character,lPrismJS as logical) as character
@@ -613,7 +610,7 @@ static function UFMakeHTMLXMLView(cXML as character,cTitle as character,cHTML as
 </html>
         endContent
 
-        cHTML:=StrTran(cHTML,"cTitle",cTitle)
+        cHTML:=StrTran(cHTML,"cTitle",TextView():WebAccentuation(cTitle))
         cHTML:=StrTran(cHTML,"cXML",cXML)
 
         cTmpFile:=GetTempPath()
@@ -796,7 +793,7 @@ static function UFMakeHTMLJSONView(cJSON as character,cTitle as character,cHTML 
 
     endif
 
-        cHTML:=StrTran(cHTML,"cTitle",cTitle)
+        cHTML:=StrTran(cHTML,"cTitle",TextView():WebAccentuation(cTitle))
         cHTML:=StrTran(cHTML,"cJSON",cJSON)
 
         cTmpFile:=GetTempPath()
@@ -842,9 +839,17 @@ static function UFMakeHTMLTextView(cText as character,cTitle as character,cHTML 
         body {
             padding: 20px;
         }
-        pre {outline: 1px solid #ccc; padding: 5px; margin: 5px; background-color: #ccc; }
+        pre {
+            outline: 1px solid #ccc;
+            padding: 5px;
+            margin: 5px;
+            background-color: #ccc;
+        }
         .number {
             color: #333333; /* Cinza Escuro */
+        }
+        .number_zero {
+            color: #2e8b57; /* Sea Green */
         }
         .letter {
             color: #1E90FF; /* Azul */
@@ -870,7 +875,11 @@ cText
             for (var i = 0; i < input.length; i++) {
                 var span = document.createElement('span');
                 if (!isNaN(input[i]) && input[i] !== ' ') {
-                    span.className = 'number';
+                    if (/[0]/.test(input[i])) {
+                        span.className = 'number_zero';
+                    } else {
+                        span.className = 'number';
+                    }
                 } else if (/[a-zA-Z]/.test(input[i])) {
                     span.className = 'letter';
                 } else {
@@ -890,7 +899,7 @@ cText
 </html>
         endContent
 
-        cHTML:=StrTran(cHTML,"cTitle",cTitle)
+        cHTML:=StrTran(cHTML,"cTitle",TextView():WebAccentuation(cTitle))
         cHTML:=StrTran(cHTML,"cText",cText)
 
         cTmpFile:=GetTempPath()
@@ -1143,7 +1152,7 @@ function realizarChamadaAPI(verb) {
 </html>
         endContent
 
-        cHTML:=StrTran(cHTML,"cTitle",cTitle)
+        cHTML:=StrTran(cHTML,"cTitle",TextView():WebAccentuation(cTitle))
         cHTML:=StrTran(cHTML,"cJSFunRealizarChamadaAPI",cJSFunRealizarChamadaAPI)
 
         cTmpFile:=GetTempPath()
@@ -1184,101 +1193,4 @@ static function UFNotepad(lApaga,cMsg,cFile)
 return(lRet)
 
 static method WebAccentuation(cString) class TextView
-
-    local cStr as character
-    local cAccent as character
-    local cWebString as character
-
-    local nAT as numeric
-
-    paramtype 1 var cString as character
-    cWebString:=cString
-
-    getAccentuation()
-    uf.dfv():DefaultEmpty(@__nAccentuation,len(__aAccentuation))
-
-    for nAT:=1 to __nAccentuation
-        cStr:=__aAccentuation[nAT][1]
-        cAccent:=("&"+__aAccentuation[nAT][3]+";")
-        cWebString:=strTran(cWebString,cStr,cAccent)
-    next nAccent
-
-return(cWebString)
-
-static function getAccentuation() as array
-
-    if (empty(__aAccentuation))
-        __aAccentuation:={;
-            {chr(009),"","HT"},;
-            {chr(010),"","LF"},;
-            {chr(013),"","CR"},;
-            {chr(129),"","129"},;
-            {chr(141),"",""},;
-            {chr(143),"","143"},;
-            {chr(144),"","144"},;
-            {chr(157),"","157"},;
-            {chr(185),"1","sup1"},;
-            {chr(186),"o","ordm"},;
-            {chr(188),"1/4","frac14"},;
-            {chr(189),"1/2","frac12"},;
-            {chr(190),"3/4","frac34"},;
-            {chr(191),"?","iquest"},;
-            {chr(192),"A","Agrave"},;
-            {chr(195),"A","Atilde"},;
-            {chr(196),"A","Auml"},;
-            {chr(197),"A","Aring"},;
-            {chr(198),"AE","AElig"},;
-            {chr(224),"a","agrave"},;
-            {chr(225),"a","aacute"},;
-            {chr(226),"a","acirc"},;
-            {chr(227),"a","atilde"},;
-            {chr(228),"a","auml"},;
-            {chr(229),"a","aring"},;
-            {chr(230),"ae","aelig"},;
-            {chr(200),"E","Egrave"},;
-            {chr(201),"E","Eacute"},;
-            {chr(202),"E","Ecirc"},;
-            {chr(203),"E","Euml"},;
-            {chr(232),"e","egrave"},;
-            {chr(233),"e","eacute"},;
-            {chr(234),"e","ecirc"},;
-            {chr(235),"e","euml"},;
-            {chr(204),"I","Igrave"},;
-            {chr(205),"I","Iacute"},;
-            {chr(206),"I","Icirc"},;
-            {chr(207),"I","Iuml"},;
-            {chr(236),"i","igrave"},;
-            {chr(237),"i","iacute"},;
-            {chr(238),"i","icirc"},;
-            {chr(239),"i","iuml"},;
-            {chr(210),"O","Ograve"},;
-            {chr(211),"O","Oacute"},;
-            {chr(212),"O","Ocirc"},;
-            {chr(213),"O","Otilde"},;
-            {chr(214),"O","Ouml"},;
-            {chr(242),"o","ograve"},;
-            {chr(243),"o","oacute"},;
-            {chr(244),"o","ocirc"},;
-            {chr(245),"o","otilde"},;
-            {chr(246),"o","ouml"},;
-            {chr(216),"O","Oslash"},;
-            {chr(217),"U","Ugrave"},;
-            {chr(218),"U","Uacute"},;
-            {chr(219),"U","Ucirc"},;
-            {chr(220),"U","Uuml"},;
-            {chr(221),"Y","Yacute"},;
-            {chr(249),"u","ugrave"},;
-            {chr(250),"u","uacute"},;
-            {chr(251),"u","ucirc"},;
-            {chr(252),"u","uuml"},;
-            {chr(253),"y","yacute"},;
-            {chr(209),"N","Ntilde"},;
-            {chr(241),"n","ntilde"},;
-            {chr(199),"C","Ccedil"},;
-            {chr(231),"c","ccedil"};
-        }
-    endif
-
-    __nAccentuation:=len(__aAccentuation)
-
-return(__aAccentuation)
+return(cTools():WebAccentuation(cString))
