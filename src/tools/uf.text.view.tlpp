@@ -846,16 +846,27 @@ static function UFMakeHTMLTextView(cText as character,cTitle as character,cHTML 
             background-color: #ccc;
         }
         .number {
-            color: #333333; /* Cinza Escuro */
+            color: #080808; /* Black */
         }
         .number_zero {
-            color: #2e8b57; /* Sea Green */
+            color: #014421; /* Green */
         }
         .letter {
-            color: #1E90FF; /* Azul */
+            color: #0000ff; /* Blue */
         }
         .other {
-            color: #FFA500; /* Laranja */
+            color: #ff8c00; /* Orange */
+        }
+        @media print {
+            body {
+                visibility: hidden;
+            }
+            .print-only {
+                visibility: visible;
+                position: absolute;
+                left: 0;
+                top: 0;
+            }
         }
     </style>
 </head>
@@ -865,7 +876,7 @@ cText
     </textarea>
     <div class="container-fluid badge bg-secondary text-nowrap font-monospace">
         <h5>cTitle</h5>
-        <pre><code id="outputText"></code></pre>
+        <pre class="print-only"><code id="outputText"></code></pre>
     </div>
     <script>
         function colorizeText() {
