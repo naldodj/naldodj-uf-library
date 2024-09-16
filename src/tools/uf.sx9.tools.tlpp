@@ -51,7 +51,7 @@ static method getSX9ArrayRelation(cAlias) class SX9Tools
     jNoRelation:=JSONObject():New()
     //Verifica as tabelas que nao terao os registros Excluidos
     cNoRelation:=getNewPar("SX9NORL"+cAlias,"")
-    aNoRelation:=cTools():StrTokArray(cNoRelation,";")
+    aNoRelation:=cTools():StrTokCountArray(cNoRelation,";")
     nRelations:=Len(aNoRelation)
     for nRelation:=1 to nRelations
         jNoRelation[aNoRelation[nRelation]]:=.F.

@@ -162,7 +162,7 @@ static method Show(xMsg,cTitulo,cLabel,aButtons,bValid,lQuebraLinha,lSoExibeMsg,
             //Verifica se Irá mostrar "Regua"
             if (lShowRuler)
                 //Obtem as Linhas conforme LF
-                aRules:=UFTools():StrTokArray(cMsg,chr(10))
+                aRules:=UFTools():StrTokCountArray(cMsg,chr(10))
                 //Verifica qual maior linha para a definição da Regua
                 nRulerSize:=0
                 nRules:=Len(aRules)

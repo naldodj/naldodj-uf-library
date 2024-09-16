@@ -406,12 +406,12 @@ static method CSVFileToJSON(cExcelFile,cJSONFile,bTmpCustomFields,cExcelPathServ
         oFWFileReader:Open()
         while (oFWFileReader:hasLine())
             cLine:=oFWFileReader:GetLine()
-            aHeader:=cTools():StrTokArray(cLine,cToken)
+            aHeader:=cTools():StrTokCountArray(cLine,cToken)
             nNames:=Len(aHeader)
             while (oFWFileReader:hasLine())
                 jDet:=JSONObject():New()
                 cLine:=oFWFileReader:GetLine()
-                aDetail:=cTools():StrTokArray(cLine,cToken)
+                aDetail:=cTools():StrTokCountArray(cLine,cToken)
                 for nName:=1 to nNames
                     cName:=aHeader[nName]
                     xValue:=aDetail[nName]

@@ -76,7 +76,7 @@ static function GetStackParameters()
             cStackEnv:=strTran(cStackEnv,"STACK ",cCRLF+"STACK ")
         endif
 
-        aStackEnv:=UFTools():StrTokArray(cStackEnv,cCRLF)
+        aStackEnv:=UFTools():StrTokCountArray(cStackEnv,cCRLF)
 
         cStackEnv:=""
 
@@ -210,7 +210,7 @@ return(aStackParameters)
 static function AddStackParameters(aStackParameters as array,nStack as numeric,cStackEnv as character)
 
     local aScope as array
-    local aTokens:=UFTools():StrTokArray(allTrim(cStackEnv),":") as array
+    local aTokens:=UFTools():StrTokCountArray(allTrim(cStackEnv),":") as array
     local aDateFormat as array
 
     local cType as character
@@ -228,7 +228,7 @@ static function AddStackParameters(aStackParameters as array,nStack as numeric,c
     local uValue as variant
 
     if (nTokens>=1)
-        aScope:=UFTools():StrTokArray(allTrim(aTokens[1])," ")
+        aScope:=UFTools():StrTokCountArray(allTrim(aTokens[1])," ")
         if (Len(aScope)>=1)
             cScope:=Upper(AllTrim(aScope[1]))
         else
