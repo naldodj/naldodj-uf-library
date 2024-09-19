@@ -26,8 +26,13 @@ class cTools
     static method TextRuler(cText as character,lStep10 as logical) as character
 
     static method StrTokArray(cString as character,cToken as character,bEvalToken as codeblock,aStrTokArr as array) as array
+    static method __StrTokArray(cString as character,cToken as character,bEvalToken as codeblock,aStrTokArr as array) as array
+
     static method StrTokCount(cString as character,cToken as character,bEvalToken as codeblock) as numeric
+    static method __StrTokCount(cString as character,cToken as character,bEvalToken as codeblock) as numeric
+
     static method StrTokCountArray(cString as character,cToken as character,bEvalToken as codeblock) as array
+    static method __StrTokCountArray(cString as character,cToken as character,bEvalToken as codeblock) as array
 
     static method WebAccentuation(cString as character) as character
 
@@ -141,6 +146,11 @@ static method StrTokArray(cString,cToken,bEvalToken,aStrTokArr) class cTools
 
 return(aStrTokArr)
 
+static method __StrTokArray(cString,cToken,bEvalToken,aStrTokArr) class cTools
+    local lTokCount:=.F. as logical
+    aStrTokArr:=strToKArray(@cString,@cToken,@bEvalToken,@aStrTokArr,@lTokCount)
+return(aStrTokArr)
+
 static method StrTokCount(cString,cToken,bEvalToken) class cTools
 
     local aStrTokArr:=Array(0) as array
@@ -158,6 +168,12 @@ static method StrTokCount(cString,cToken,bEvalToken) class cTools
 
 return(nStrTokCount)
 
+static method __StrTokCount(cString,cToken,bEvalToken) class cTools
+    local lTokCount:=.T. as logical
+    local nStrTokCount:=0 as numeric
+    nStrTokCount:=strToKArray(@cString,@cToken,@bEvalToken,nil,@lTokCount)
+return(nStrTokCount)
+
 static method StrTokCountArray(cString,cToken,bEvalToken) class cTools
 
     local aStrTokArr as array
@@ -173,7 +189,7 @@ static method StrTokCountArray(cString,cToken,bEvalToken) class cTools
     paramtype 2 var cToken as character optional default "+"
     paramtype 3 var bEvalToken as block optional
 
-    nStrTokCount:=cTools():StrTokCount(@cString,cToken,bEvalToken)
+    nStrTokCount:=cTools():StrTokCount(@cString,@cToken,@bEvalToken)
     aStrTokArr:=Array(nStrTokCount)
 
     nRealSize:=Len(cToken)
@@ -192,7 +208,37 @@ static method StrTokCountArray(cString,cToken,bEvalToken) class cTools
 
 return(aStrTokArr)
 
-static function strToKArray(cString,cToken,bEvalToken,aStrTokArr,lTokCount) as variant
+static method __StrTokCountArray(cString,cToken,bEvalToken) class cTools
+
+    local aStrTokArr as array
+
+    local cStr as character
+
+    local nIndex:=0 as numeric
+    local nATToken as numeric
+    local nRealSize as numeric
+    local nStrTokCount as numeric
+
+    nStrTokCount:=cTools():__StrTokCount(@cString,@cToken,@bEvalToken)
+    aStrTokArr:=Array(nStrTokCount)
+
+    nRealSize:=Len(cToken)
+    while ((nATToken:=AT(cToken,cString))>0)
+        cStr:=Left(cString,(nATToken-1))
+        aStrTokArr[++nIndex]:=cStr
+        cString:=subStr(cString,(nATToken+nRealSize))
+    end while
+
+    if (Len(cString)>0)
+        aStrTokArr[++nIndex]:=cString
+    endif
+
+    cStr:=""
+    cString:=""
+
+return(aStrTokArr)
+
+static function strToKArray(cString as character,cToken as character,bEvalToken as codeblock,aStrTokArr as array,lTokCount as logical) as variant
 
     local cStr,cStringNew as character
 
@@ -241,7 +287,11 @@ static function strToKArray(cString,cToken,bEvalToken,aStrTokArr,lTokCount) as v
     cString:=cStringNew
     cStringNew:=""
 
-return(if(lTokCount,nStrTokCount,aStrTokArr))
+    if (lTokCount)
+        return(nStrTokCount)
+    endif
+
+return(aStrTokArr)
 
 static method WebAccentuation(cString) class cTools
 
