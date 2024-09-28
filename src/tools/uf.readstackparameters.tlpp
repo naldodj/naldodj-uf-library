@@ -420,7 +420,7 @@ static function ReadStackParameters(cStack,cParameter,cScope,cModule,aStackParam
 
     begin sequence
 
-        DEFAULT aStackParameters:=GetStackParameters()
+        dfv():default(@aStackParameters,GetStackParameters())
 
         if Empty(aStackParameters)
             break

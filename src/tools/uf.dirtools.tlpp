@@ -523,7 +523,7 @@ return(nil)
 static function BrowseFilesGetFiles(cDirectory as character,cMask as character,nTypeOrder as numeric,cAttribute as character) as array
     local aFiles as array
     local nFile,nFiles as numeric
-    DEFAULT nTypeOrder:=1
+    dfv():default(@nTypeOrder,1)
     aFiles:=Directory(cDirectory+cMask/*cDirEsp*/,cAttribute/*cAtributos*/,nil/*uParam1*/,nil/*lCaseSensitive*/,nTypeOrder/*nTypeOrder*/)
     if (cAttribute=="D")
         nFile:=0

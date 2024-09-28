@@ -73,7 +73,7 @@ static method Show(xMsg,cTitulo,cLabel,aButtons,bValid,lQuebraLinha,lSoExibeMsg,
 
     local nQuebra:=68 as numeric
 
-    DEFAULT xMsg:=""
+    dfv():default(@xMsg,"")
 
     paramtype 1 var cTitulo as character optional default ""
     paramtype 2 var cLabel as character optional default ""
@@ -645,7 +645,7 @@ static function UFMakeHTMLJSONView(cJSON as character,cTitle as character,cHTML 
 
     begin sequence
 
-        DEFAULT lPrismJS:=.T.
+        dfv():default(@lPrismJS,.T.)
 
         lHasJSON:=(jMemo:FromJSON(cJSON)==NIL)
         if (!lHasJSON)
@@ -1188,7 +1188,7 @@ static function UFNotepad(lApaga,cMsg,cFile)
     local cDir:=GetTempPath() as character
     local hFile as numeric
 
-    DEFAULT lApaga:=.F.//Se .T. apaga arquivo temporario.
+    dfv():default(@lApaga,.F.)//Se .T. apaga arquivo temporario.
 
     if (!lApaga)
         hFile:=fCreate(cDir+cFile)
