@@ -55,7 +55,7 @@ static method GetAutoGRLog(lKeepErrors,lSanitization) class UFTools
     paramtype 1 var lKeepErrors as logical optional default .T.
     paramtype 2 var lSanitization as logical optional default .T.
     if (lKeepErrors)
-        //Warning: __aErrAuto é um "Ponteiro" para __aErrAuto de VarAutoLog. Não limpar
+        //Warning: __aErrAuto e um "Ponteiro" para __aErrAuto de VarAutoLog. Nao limpar
         __aErrAuto:=VarAutoLog()
         if (!lSanitization)
             aEval(aErrorLog,{|e|aAdd(__aErrAuto,e)})
@@ -67,6 +67,8 @@ static method GetAutoGRLog(lKeepErrors,lSanitization) class UFTools
                     aAdd(__aErrAuto,cError)
                 endif
             next nError
+            FWFreeArray(@aErrorLog)
+            aErrorLog:=aClone(__aErrAuto)
         endif
     endif
 return(aErrorLog)
