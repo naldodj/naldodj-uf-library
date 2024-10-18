@@ -114,11 +114,7 @@ static method ViewData(cAlias,nRecNo,cTitle,aButtons) class MsMGetEx
             cField:=adbStruct[nField][DBS_NAME]
             aAdd(aFields,cField)
             cVar:=("M->"+cField)
-            if (cField=="EA_XDFLAG")
-                xValue:=subStr(aba.fsp.fsp():EA_XFLAGBox(M->EA_XFLAG),3)
-            else
-                xValue:=(cAlias)->(FieldGet(nField))
-            endif
+            xValue:=(cAlias)->(FieldGet(nField))
             private &(cVar):=xValue as variant
             aAdd(aFieldsNoSX3,Array(18))
             aFieldsNoSX3[nField][1]:=getSX3Cache(cField,"X3_TITULO")//-> titulo
