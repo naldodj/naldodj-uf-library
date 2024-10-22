@@ -115,6 +115,13 @@ static method ViewData(cAlias,nRecNo,cTitle,aButtons) class MsMGetEx
             aAdd(aFields,cField)
             cVar:=("M->"+cField)
             xValue:=(cAlias)->(FieldGet(nField))
+            if (empty(xValue).and.!Empty(getSX3Cache(cField,"X3_RELACAO")))
+                bErrorBlock:=ErrorBlock({|e|Break(e)})
+                begin sequence
+                    xValue:=&(getSX3Cache(cField,"X3_RELACAO"))
+                end sequence
+                ErrorBlock(bErrorBlock)
+            endif
             private &(cVar):=xValue as variant
             aAdd(aFieldsNoSX3,Array(18))
             aFieldsNoSX3[nField][1]:=getSX3Cache(cField,"X3_TITULO")//-> titulo
