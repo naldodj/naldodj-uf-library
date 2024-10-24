@@ -19,9 +19,6 @@ using namespace uf
 static s__aBlindMode:=Array(0) as array
 static s__nBlindModeAT as numeric
 
-static s__aBlindMode:=Array(0) as array
-static s__nBlindModeAT as numeric
-
 #include "set.ch"
 #include "totvs.ch"
 #include "common.ch"
