@@ -19,6 +19,9 @@ using namespace uf
 static s__aBlindMode:=Array(0) as array
 static s__nBlindModeAT as numeric
 
+static s__aBlindMode:=Array(0) as array
+static s__nBlindModeAT as numeric
+
 #include "set.ch"
 #include "totvs.ch"
 #include "common.ch"
@@ -28,6 +31,7 @@ class Blind
     static method SetBlindMode(lSetBlind as logical) as logical
     static method SaveBlindMode() as variant
     static method RestoreBlindMode() as variant
+    static method IsReallyInBlindMode() as logical
 end class
 
 static method SetBlindMode(lSetBlind) class Blind
@@ -113,3 +117,8 @@ static method RestoreBlindMode() class Blind
     end sequence
 
 return
+
+static method IsReallyInBlindMode() class Blind
+    local lIsBlind:=IsBlind() as logical
+    lIsBlind:=((lIsBlind).and.(ValType(GetWndDefault())!="O"))
+return(lIsBlind)
