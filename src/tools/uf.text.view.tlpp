@@ -394,12 +394,27 @@ static method ShowHTMLJSON(cJSON,cTitle,lPrismJS) class TextView
 
     local cURL as character
     local cHTML as character
+    local cCHR10:=Chr(10) as character
+    local cCHR13:=Chr(13) as character
+    local cSpace2:=Space(2) as character
     local cBaseURL as character
     local lShowHTMLJSON as logical
 
     paramtype 1 var cJSON as character optional default ""
     paramtype 2 var cTitle as character optional default ""
     paramtype 3 var lPrismJS as logical optional default .T.
+
+    while (cCHR10$cJSON)
+        cJSON:=strTran(cJSON,cCHR10,"")
+    end while
+
+    while (cCHR13$cJSON)
+        cJSON:=strTran(cJSON,cCHR13,"")
+    end while
+
+    while (cSpace2$cJSON)
+        cJSON:=strTran(cJSON,cSpace2," ")
+    end while
 
     cURL:=UFMakeHTMLJSONView(@cJSON,@cTitle,@cHTML,@cBaseURL,@lPrismJS)
 
