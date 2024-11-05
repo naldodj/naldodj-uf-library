@@ -27,6 +27,7 @@ class dirtools
     static method DirRemove(cDirRoot as character,cDirRemove as character) as logical
 
     static method BrowseFiles(/*@*/oFWBrowse as object,/*@*/aFWBrwData as array,cTitle as character,cDirectory as character,cMask as character,nTypeOrder as numeric,bLDblClick as codeblock,bCustomHeaderClick as codeblock,aCustomButtons as array,cAttribute as character) as variant
+    static method BrowseFilesGetFiles(cDirectory as character,cMask as character,nTypeOrder as numeric,cAttribute as character) as array
 
 end class
 
@@ -143,6 +144,13 @@ static method BrowseFiles(/*@*/oFWBrowse,/*@*/aFWBrwData,cTitle,cDirectory,cMask
     paramtype 9 var aCustomButtons as array optional default array(0)
     paramtype 10 var cAttribute as character optional
 return(BrowseFiles(@oFWBrowse,@aFWBrwData,@cTitle,@cDirectory,@cMask,@nTypeOrder,@bLDblClick,@bCustomHeaderClick,@aCustomButtons,@cAttribute))
+
+static method BrowseFilesGetFiles(cDirectory,cMask,nTypeOrder,cAttribute) class dirtools
+    paramtype 1 var cDirectory as character
+    paramtype 2 var cMask as character
+    paramtype 3 var nTypeOrder as numeric optional
+    paramtype 4 var cAttribute as character optional
+return(BrowseFilesGetFiles(@cDirectory,@cMask,@nTypeOrder,@cAttribute))
 
 static function DirMake(cDirMake as character,cDrive as character,cPath as character,cFile as character,cExt as character) as logical
 
