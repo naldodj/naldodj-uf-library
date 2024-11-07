@@ -159,8 +159,8 @@ return(lConfigure)
 
 static Function MyIsAdmin() as logical
 
-    local cUsr:=Space(50) as character
-    local cPdw:=Space(50) as character
+    local cUSR:=Space(50) as character
+    local cPWD:=Space(50) as character
 
     local lRet:=.F. as logical
     local lFWMONITORMSG:=FindFunction("FWMONITORMSG") as logical
@@ -177,15 +177,15 @@ static Function MyIsAdmin() as logical
         oPanel:Align:=CONTROL_ALIGN_ALLCLIENT
 
         @ 005,05 SAY "Usuário" SIZE 60,07 OF oPanel PIXEL
-        @ 013,05 MSGET cUsr SIZE 80,08 OF oPanel PIXEL
+        @ 013,05 MSGET cUSR SIZE 80,08 OF oPanel PIXEL
 
         @ 028,05 SAY "Senha" SIZE 60,07 OF oPanel PIXEL
-        @ 036,05 MSGET cPdw  SIZE 80,08 PASSWORD OF oPanel PIXEL
+        @ 036,05 MSGET cPWD  SIZE 80,08 PASSWORD OF oPanel PIXEL
 
         @ 010,100 BITMAP oBmp RESNAME "UF_LOGIN" SIZE 55,55 NOBORDER OF oPanel PIXEL
 
         DEFINE SBUTTON oOk FROM 53,27 TYPE 1 ENABLE OF oPanel PIXEL ;
-        ACTION (lRet:=VldAdmin(cUsr,cPdw),If(lRet,oDlg:End(),nil))
+        ACTION (lRet:=VldAdmin(cUSR,cPWD),If(lRet,oDlg:End(),nil))
 
         DEFINE SBUTTON oCancel FROM 53,57 TYPE 2 ENABLE OF oPanel PIXEL ACTION oDlg:End()
 
@@ -200,21 +200,21 @@ static Function MyIsAdmin() as logical
     DelClassIntF()
 
     if ((lRet).and.(lFWMONITORMSG))
-        lFWMONITORMSG:=(!UFRegeXChkUsr(cUsr))
+        lFWMONITORMSG:=(!UFRegeXChkUsr(cUSR))
         if (lFWMONITORMSG)
-            FWMonitorMsg("UF.main.exec :: Logged : "+Alltrim(cUsr))
+            FWMonitorMsg("UF.main.exec :: Logged : "+Alltrim(cUSR))
         endif
     endif
 
 return(lRet)
 
-static function VldAdmin(cUsr as character,cPdw as character) as logical
+static function VldAdmin(cUSR as character,cPWD as character) as logical
 
     local aPswRet as array
 
     local lRet:=.F. as logical
 
-    FWMsgRun(nil,{||lRet:=(PswAdmin(Alltrim(cUsr),Alltrim(cPdw))==0)},nil,"Validando ...")
+    FWMsgRun(nil,{||lRet:=(PswAdmin(Alltrim(cUSR),Alltrim(cPWD))==0)},nil,"Validando ...")
 
     if (!lRet)
         ApMsgStop("Usuário não é administrador."+CRLF+"Apenas administradores podem executar este processo.")
@@ -235,10 +235,10 @@ static function VldAdmin(cUsr as character,cPdw as character) as logical
 
 return(lRet)
 
-static function UFRegeXChkUsr(cUsr as character) as logical
+static function UFRegeXChkUsr(cUSR as character) as logical
 
     local cPattern as character
-    local cStringMatch:=Lower(AllTrim(cUsr)) as character
+    local cStringMatch:=Lower(AllTrim(cUSR)) as character
 
     local lChkUser:=.F. as logical
 
