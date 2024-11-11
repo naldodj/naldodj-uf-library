@@ -211,7 +211,7 @@ static method Clean(cMutexStack) class Mutex
 
     local cIDMutex as character
 
-    local nSemaphore,nSemaphores as numeric
+    local nSemaphore,nSemaphores,nMutexStack as numeric
 
     paramtype 1 var cMutexStack as character optional default "_"
 
@@ -220,11 +220,9 @@ static method Clean(cMutexStack) class Mutex
     nSemaphores:=Len(aSemaphores)
     for nSemaphore:=1 to nSemaphores
         cIDMutex:=aSemaphores[nSemaphore][1]
-        if (left(cIDMutex,Len(cMutexStack))==cMutexStack)
-            cIDMutex:=strTran(cIDMutex,cMutexStack,"")
-            if (left(cIDMutex,1)=="_")
-                cIDMutex:=SubStr(cIDMutex,2)
-            endif
+        nMutexStack:=Len(cMutexStack)
+        if (left(cIDMutex,nMutexStack)==cMutexStack)
+            cIDMutex:=SubStr(cIDMutex,nMutexStack+1)
             Mutex():UnLock(cIDMutex,cMutexStack)
         endif
     next nSemaphore
