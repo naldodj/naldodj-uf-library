@@ -18,14 +18,15 @@ present in the latter.
 namespace uf
 using namespace uf
 
-#define MUTEX_INTERNAL_LOXCK "MUTEX_INTERNAL_LOCK_"
+#define MUTEX_INTERNAL_LOCK "MUTEX_INTERNAL_LOCK_"
 
 static oHMMutex:=tHashMap():New() as object
 
 class Mutex
 
-    static method Lock(cMutexID as character,cMutexStack as character,nHDLMutex as numeric,nError as numeric,lShared as logical) as logical
-    static method UnLock(cMutexID as character,cMutexStack as character) as logical
+    static method Lock(cMutexID as character,cMutexStack as character,nHDLMutex as numeric,nError as numeric,lShared as logical,lErase as logical) as logical
+    static method UnLock(cMutexID as character,cMutexStack as character,lErase as logical) as logical
+    static method Exists(cMutexID as character,cMutexStack as character) as logical
     static method Write(cMutexID as character,cMutexStack as character,cBuffer as character,nBuffer as numeric) as logical
     static method ReadStr(cMutexID as character,cMutexStack as character,nBytes as numeric) as character
     static method Clean(cMutexStack as character) as variant
@@ -35,7 +36,7 @@ class Mutex
 
 end class
 
-static method Lock(cMutexID,cMutexStack,nHDLMutex,nError,lShared) class Mutex
+static method Lock(cMutexID,cMutexStack,nHDLMutex,nError,lShared,lErase) class Mutex
     local cIDMutex as character
     local lLock:=.F. as logical
     local lHasMutex as logical
@@ -46,11 +47,10 @@ static method Lock(cMutexID,cMutexStack,nHDLMutex,nError,lShared) class Mutex
     paramtype 3 var nHDLMutex as numeric optional default (-1)
     paramtype 4 var nError as numeric optional default 0
     paramtype 5 var lShared as logical optional default .F.
-    cIDMutex:=cMutexStack
-    cIDMutex+=if((cMutexStack!="_"),"_","")
-    cIDMutex+=cMutexID
+    paramtype 6 var lErase as logical optional default .T.
+    cIDMutex:=GetIDMutex(cMutexID,cMutexStack)
     oFWThreadSemaphoreLock:=FWThreadSemaphore():New()
-    oFWThreadSemaphoreLock:SetID(MUTEX_INTERNAL_LOXCK+cIDMutex)
+    oFWThreadSemaphoreLock:SetID(MUTEX_INTERNAL_LOCK+cIDMutex)
     lLock:=oFWThreadSemaphoreLock:Open(.F.)
     if (lLock)
         lHasMutex:=oHMMutex:Get(cIDMutex,@oFWThreadSemaphore)
@@ -58,14 +58,14 @@ static method Lock(cMutexID,cMutexStack,nHDLMutex,nError,lShared) class Mutex
             oFWThreadSemaphore:=FWThreadSemaphore():New()
             oFWThreadSemaphore:SetID(cIDMutex)
             lHasMutex:=oFWThreadSemaphore:Exist()
-            if (lHasMutex)
+            if ((lHasMutex).and.(lErase))
                 lHasMutex:=(oFWThreadSemaphore:Erase()==(-1))
             endif
             oHMMutex:Set(cIDMutex,@oFWThreadSemaphore)
             lLock:=oFWThreadSemaphore:Open(((!lHasMutex).and.(lShared)))
         else
             lHasMutex:=oFWThreadSemaphore:Exist()
-            if (lHasMutex)
+            if ((lHasMutex).and.(lErase))
                 lHasMutex:=(oFWThreadSemaphore:Erase()==(-1))
             endif
             lLock:=oFWThreadSemaphore:Open(((!lHasMutex).and.(lShared)))
@@ -81,40 +81,65 @@ static method Lock(cMutexID,cMutexStack,nHDLMutex,nError,lShared) class Mutex
     FreeObj(@oFWThreadSemaphoreLock)
 return(lLock)
 
-static method UnLock(cMutexID,cMutexStack) class Mutex
+static method UnLock(cMutexID,cMutexStack,lErase) class Mutex
+    local cIDMutex as character
     local lUnLock:=.F. as logical
     local lHasMutex as logical
     local oFWThreadSemaphore as object
     paramtype 1 var cMutexID as character
     paramtype 2 var cMutexStack as character optional default "_"
-    cIDMutex:=cMutexStack
-    cIDMutex+=if(cMutexStack!="_","_","")
-    cIDMutex+=cMutexID
+    paramtype 3 var lErase as logical optional default .T.
+    cIDMutex:=GetIDMutex(cMutexID,cMutexStack)
     lHasMutex:=oHMMutex:Get(cIDMutex,@oFWThreadSemaphore)
     if (lHasMutex)
         oFWThreadSemaphore:Close()
-        oFWThreadSemaphore:Erase()
+        if (lErase)
+            oFWThreadSemaphore:Erase()
+        endif
         lUnLock:=(!oFWThreadSemaphore:Exist())
     endif
-    FreeObj(@oFWThreadSemaphore)
-    oHMMutex:Del(cIDMutex)
+    if ((lHasMutex).and.(lUnLock))
+        FreeObj(@oFWThreadSemaphore)
+        oHMMutex:Del(cIDMutex)
+    endif
 return(lUnLock)
 
+static method Exists(cMutexID,cMutexStack) class Mutex
+    local cIDMutex as character
+    local lHasMutex as logical
+    local oFWThreadSemaphore as object
+    paramtype 1 var cMutexID as character
+    paramtype 2 var cMutexStack as character optional default "_"
+    cIDMutex:=GetIDMutex(cMutexID,cMutexStack)
+    oFWThreadSemaphore:=FWThreadSemaphore():New()
+    oFWThreadSemaphore:SetID(cIDMutex)
+    lHasMutex:=oFWThreadSemaphore:Exist()
+    FreeObj(@oFWThreadSemaphore)
+return(lHasMutex)
+
 static method Write(cMutexID,cMutexStack,cBuffer,nBuffer) class Mutex
+    local cIDMutex as character
     local lWrited:=.F. as logical
     local lHasMutex as logical
+    local nAttempt,nAttempts as numeric
     local oFWThreadSemaphore as object
     local oFWThreadSemaphoreLock as object
     paramtype 1 var cMutexID as character
     paramtype 2 var cMutexStack as character optional default "_"
     paramtype 3 var cBuffer as character optional default ""
     paramtype 4 var nBuffer as numeric optional default Len(cBuffer)
-    cIDMutex:=cMutexStack
-    cIDMutex+=if(cMutexStack!="_","_","")
-    cIDMutex+=cMutexID
+    cIDMutex:=GetIDMutex(cMutexID,cMutexStack)
     oFWThreadSemaphoreLock:=FWThreadSemaphore():New()
-    oFWThreadSemaphoreLock:SetID(MUTEX_INTERNAL_LOXCK+cIDMutex)
-    if (oFWThreadSemaphoreLock:Open(.F.))
+    oFWThreadSemaphoreLock:SetID(MUTEX_INTERNAL_LOCK+cIDMutex)
+    nAttempt=0
+    nAttempts:=50
+    while (!(lHasMutex:=oFWThreadSemaphoreLock:Open(.F.)))
+        if (++nAttempt>nAttempts)
+            exit
+        endif
+        Sleep(100)
+    end while
+    if (lHasMutex)
         oFWThreadSemaphore:=FWThreadSemaphore():New()
         oFWThreadSemaphore:SetID(cIDMutex)
         lHasMutex:=oFWThreadSemaphore:Exist()
@@ -136,28 +161,35 @@ static method Write(cMutexID,cMutexStack,cBuffer,nBuffer) class Mutex
 return(lWrited)
 
 static method ReadStr(cMutexID,cMutexStack,nBytes) class Mutex
+    local cIDMutex as character
     local cReadStr:="" as character
-    local lWrited:=.F. as logical
     local lHasMutex as logical
+    local nAttempt,nAttempts as numeric
     local oFWThreadSemaphore as object
     local oFWThreadSemaphoreLock as object
     paramtype 1 var cMutexID as character
     paramtype 2 var cMutexStack as character optional default "_"
     paramtype 4 var nBytes as numeric optional default 0
-    cIDMutex:=cMutexStack
-    cIDMutex+=if(cMutexStack!="_","_","")
-    cIDMutex+=cMutexID
+    cIDMutex:=GetIDMutex(cMutexID,cMutexStack)
     oFWThreadSemaphoreLock:=FWThreadSemaphore():New()
-    oFWThreadSemaphoreLock:SetID(MUTEX_INTERNAL_LOXCK+cIDMutex)
-    if (oFWThreadSemaphoreLock:Open(.F.))
+    oFWThreadSemaphoreLock:SetID(MUTEX_INTERNAL_LOCK+cIDMutex)
+    nAttempt=0
+    nAttempts:=50
+    while (!(lHasMutex:=oFWThreadSemaphoreLock:Open(.F.)))
+        if (++nAttempt>nAttempts)
+            exit
+        endif
+        Sleep(100)
+    end while
+    if (lHasMutex)
         oFWThreadSemaphore:=FWThreadSemaphore():New()
         oFWThreadSemaphore:SetID(cIDMutex)
         lHasMutex:=oFWThreadSemaphore:Exist()
         if (lHasMutex)
-            lWrited:=oFWThreadSemaphore:Open(.T./*lShared*/)
-            lWrited:=((lWrited).and.oFWThreadSemaphore:nLCKFile!=(-1))
-            lWrited:=((lWrited).and.(oFWThreadSemaphore:nError==0))
-            if (lWrited)
+            lHasMutex:=oFWThreadSemaphore:Open(.T./*lShared*/)
+            lHasMutex:=((lHasMutex).and.oFWThreadSemaphore:nLCKFile!=(-1))
+            lHasMutex:=((lHasMutex).and.(oFWThreadSemaphore:nError==0))
+            if (lHasMutex)
                 if (nBytes==0)
                     nBytes:=fSeek(oFWThreadSemaphore:nLCKFile,0,FS_END)
                     oFWThreadSemaphore:Seek(0,FS_SET)
@@ -189,6 +221,10 @@ static method Clean(cMutexStack) class Mutex
     for nSemaphore:=1 to nSemaphores
         cIDMutex:=aSemaphores[nSemaphore][1]
         if (left(cIDMutex,Len(cMutexStack))==cMutexStack)
+            cIDMutex:=strTran(cIDMutex,cMutexStack,"")
+            if (left(cIDMutex,1)=="_")
+                cIDMutex:=SubStr(cIDMutex,2)
+            endif
             Mutex():UnLock(cIDMutex,cMutexStack)
         endif
     next nSemaphore
@@ -254,3 +290,10 @@ method UnLockByFile(cHDLMutex,nHDLMutex,cMutexStack) class Mutex
         endif
     endif
 return(lUnLock)
+
+static function GetIDMutex(cMutexID as character,cMutexStack as character) as character
+    local cIDMutex as character
+    cIDMutex:=cMutexStack
+    cIDMutex+=if((cMutexStack!="_"),"_","")
+    cIDMutex+=cMutexID
+return(cIDMutex)
