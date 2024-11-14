@@ -24,19 +24,19 @@ static oHMMutex:=tHashMap():New() as object
 
 class Mutex
 
-    static method Lock(cMutexID as character,cMutexStack as character,nHDLMutex as numeric,nError as numeric,lShared as logical,lErase as logical) as logical
-    static method UnLock(cMutexID as character,cMutexStack as character,lErase as logical) as logical
+    static method Lock(cMutexID as character,cMutexStack as character,nHDLMutex as numeric,nError as numeric,lShared as logical,lEraseFileLock as logical) as logical
+    static method UnLock(cMutexID as character,cMutexStack as character,lEraseFileLock as logical) as logical
     static method Exists(cMutexID as character,cMutexStack as character) as logical
     static method Write(cMutexID as character,cMutexStack as character,cBuffer as character,nBuffer as numeric) as logical
     static method ReadStr(cMutexID as character,cMutexStack as character,nBytes as numeric) as character
-    static method Clean(cMutexStack as character) as variant
+    static method Clean(cMutexStack as character,lEraseFileLock as logical) as variant
 
     static method LockByFile(cHDLMutex as character,nHDLMutex as numeric,nSleep as numeric,nAttempts as numeric,cMutexStack as character,nError as numeric,lShared as logical) as logical
-    static method UnLockByFile(cHDLMutex as character,nHDLMutex as numeric,cMutexStack as character) as logical
+    static method UnLockByFile(cHDLMutex as character,nHDLMutex as numeric,cMutexStack as character,lEraseFileLock as logical) as logical
 
 end class
 
-static method Lock(cMutexID,cMutexStack,nHDLMutex,nError,lShared,lErase) class Mutex
+static method Lock(cMutexID,cMutexStack,nHDLMutex,nError,lShared,lEraseFileLock) class Mutex
     local cIDMutex as character
     local lLock:=.F. as logical
     local lHasMutex as logical
@@ -47,7 +47,7 @@ static method Lock(cMutexID,cMutexStack,nHDLMutex,nError,lShared,lErase) class M
     paramtype 3 var nHDLMutex as numeric optional default (-1)
     paramtype 4 var nError as numeric optional default 0
     paramtype 5 var lShared as logical optional default .F.
-    paramtype 6 var lErase as logical optional default .T.
+    paramtype 6 var lEraseFileLock as logical optional default .T.
     cIDMutex:=GetIDMutex(cMutexID,cMutexStack)
     oFWThreadSemaphoreLock:=FWThreadSemaphore():New()
     oFWThreadSemaphoreLock:SetID(MUTEX_INTERNAL_LOCK+cIDMutex)
@@ -58,14 +58,14 @@ static method Lock(cMutexID,cMutexStack,nHDLMutex,nError,lShared,lErase) class M
             oFWThreadSemaphore:=FWThreadSemaphore():New()
             oFWThreadSemaphore:SetID(cIDMutex)
             lHasMutex:=oFWThreadSemaphore:Exist()
-            if ((lHasMutex).and.(lErase))
+            if ((lHasMutex).and.(lEraseFileLock))
                 lHasMutex:=(oFWThreadSemaphore:Erase()==(-1))
             endif
             oHMMutex:Set(cIDMutex,@oFWThreadSemaphore)
             lLock:=oFWThreadSemaphore:Open(((!lHasMutex).and.(lShared)))
         else
             lHasMutex:=oFWThreadSemaphore:Exist()
-            if ((lHasMutex).and.(lErase))
+            if ((lHasMutex).and.(lEraseFileLock))
                 lHasMutex:=(oFWThreadSemaphore:Erase()==(-1))
             endif
             lLock:=oFWThreadSemaphore:Open(((!lHasMutex).and.(lShared)))
@@ -81,19 +81,19 @@ static method Lock(cMutexID,cMutexStack,nHDLMutex,nError,lShared,lErase) class M
     FreeObj(@oFWThreadSemaphoreLock)
 return(lLock)
 
-static method UnLock(cMutexID,cMutexStack,lErase) class Mutex
+static method UnLock(cMutexID,cMutexStack,lEraseFileLock) class Mutex
     local cIDMutex as character
     local lUnLock:=.F. as logical
     local lHasMutex as logical
     local oFWThreadSemaphore as object
     paramtype 1 var cMutexID as character
     paramtype 2 var cMutexStack as character optional default "_"
-    paramtype 3 var lErase as logical optional default .T.
+    paramtype 3 var lEraseFileLock as logical optional default .T.
     cIDMutex:=GetIDMutex(cMutexID,cMutexStack)
     lHasMutex:=oHMMutex:Get(cIDMutex,@oFWThreadSemaphore)
     if (lHasMutex)
         oFWThreadSemaphore:Close()
-        if (lErase)
+        if (lEraseFileLock)
             oFWThreadSemaphore:Erase()
         endif
         lUnLock:=(!oFWThreadSemaphore:Exist())
@@ -205,7 +205,7 @@ static method ReadStr(cMutexID,cMutexStack,nBytes) class Mutex
     FreeObj(@oFWThreadSemaphoreLock)
 return(cReadStr)
 
-static method Clean(cMutexStack) class Mutex
+static method Clean(cMutexStack,lEraseFileLock) class Mutex
 
     local aSemaphores as array
 
@@ -214,6 +214,7 @@ static method Clean(cMutexStack) class Mutex
     local nSemaphore,nSemaphores,nMutexStack as numeric
 
     paramtype 1 var cMutexStack as character optional default "_"
+    paramtype 2 var lEraseFileLock as logical optional default .T.
 
     oHMMutex:List(@aSemaphores)
 
@@ -223,7 +224,7 @@ static method Clean(cMutexStack) class Mutex
         nMutexStack:=Len(cMutexStack)
         if (left(cIDMutex,nMutexStack)==cMutexStack)
             cIDMutex:=SubStr(cIDMutex,nMutexStack+1)
-            Mutex():UnLock(cIDMutex,cMutexStack)
+            Mutex():UnLock(cIDMutex,cMutexStack,lEraseFileLock)
         endif
     next nSemaphore
 
@@ -250,6 +251,14 @@ method LockByFile(cHDLMutex,nHDLMutex,nSleep,nAttempts,cMutexStack,nError,lShare
     paramtype 7 var lShared as logical optional default .F.
 
     lCreate:=(nHDLMutex==(-1))
+    if (!lCreate)
+        fSeek(nHDLMutex,0,0)
+        lCreate:=(fError()!=0)
+        fClose(nHDLMutex)
+        if (lCreate)
+            nHDLMutex:=(-1)
+        endif
+    endif
 
     cHDLMutex:=lower(cHDLMutex)
 
@@ -274,18 +283,23 @@ return(lMutex)
 static function __MyMutexLock(cHDLMutex as character,cMutexStack as character,nHDLMutex as numeric,nError as numeric,lShared as logical)
 return(Mutex():Lock(@cHDLMutex,@cMutexStack,@nHDLMutex,@nError,@lShared))
 
-method UnLockByFile(cHDLMutex,nHDLMutex,cMutexStack) class Mutex
+method UnLockByFile(cHDLMutex,nHDLMutex,cMutexStack,lEraseFileLock) class Mutex
     local lUnLock as logical
     paramtype 1 var cHDLMutex as character
     paramtype 2 var nHDLMutex as numeric optional default (-1)
     paramtype 3 var cMutexStack as character optional default "_"
+    paramtype 4 var lEraseFileLock as logical optional default .T.
     cHDLMutex:=lower(cHDLMutex)
     lUnLock:=(nHDLMutex!=(-1))
     if (lUnLock)
-        lUnLock:=Mutex():UnLock(@cHDLMutex,@cMutexStack)
-        if (lUnLock)
-            nHDLMutex:=(-1)
-        endif
+        lUnLock:=Mutex():UnLock(@cHDLMutex,@cMutexStack,@lEraseFileLock)
+        fClose(nHDLMutex)
+        nHDLMutex:=(-1)
+    elseif (nHDLMutex>=0)
+        fSeek(nHDLMutex,0,0)
+        lUnLock:=(fError()!=0)
+        fClose(nHDLMutex)
+        nHDLMutex:=(-1)
     endif
 return(lUnLock)
 
