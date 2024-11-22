@@ -51,7 +51,8 @@ static method Lock(cMutexID,cMutexStack,nHDLMutex,nError,lShared,lEraseFileLock)
     cIDMutex:=GetIDMutex(cMutexID,cMutexStack)
     oFWThreadSemaphoreLock:=FWThreadSemaphore():New()
     oFWThreadSemaphoreLock:SetID(MUTEX_INTERNAL_LOCK+cIDMutex)
-    lLock:=oFWThreadSemaphoreLock:Open(.F.)
+    lLock:=((GlbNmLock(MUTEX_INTERNAL_LOCK+cIDMutex)).and.(oFWThreadSemaphoreLock:Open(.F.)))
+    lLock:=((lLock).and.(GlbNmLock(cIDMutex)))
     if (lLock)
         lHasMutex:=oHMMutex:Get(cIDMutex,@oFWThreadSemaphore)
         if (!lHasMutex)
@@ -79,11 +80,13 @@ static method Lock(cMutexID,cMutexStack,nHDLMutex,nError,lShared,lEraseFileLock)
     oFWThreadSemaphoreLock:Close()
     oFWThreadSemaphoreLock:Erase()
     FreeObj(@oFWThreadSemaphoreLock)
+    GlbNmUnlock(MUTEX_INTERNAL_LOCK+cIDMutex)
 return(lLock)
 
 static method UnLock(cMutexID,cMutexStack,lEraseFileLock) class Mutex
     local cIDMutex as character
     local lUnLock:=.F. as logical
+    local lGlbNmUnlock:=.F. as logical
     local lHasMutex as logical
     local oFWThreadSemaphore as object
     paramtype 1 var cMutexID as character
@@ -95,13 +98,18 @@ static method UnLock(cMutexID,cMutexStack,lEraseFileLock) class Mutex
         oFWThreadSemaphore:Close()
         if (lEraseFileLock)
             oFWThreadSemaphore:Erase()
+            lUnLock:=(!oFWThreadSemaphore:Exist())
         endif
-        lUnLock:=(!oFWThreadSemaphore:Exist())
+        lGlbNmUnlock:=GlbNmUnlock(cIDMutex)
     endif
     if ((lHasMutex).and.(lUnLock))
         FreeObj(@oFWThreadSemaphore)
         oHMMutex:Del(cIDMutex)
     endif
+    if (!lGlbNmUnlock)
+        lGlbNmUnlock:=GlbNmUnlock(cIDMutex)
+    endif
+    lUnLock:=((lUnLock).or.(lGlbNmUnlock))
 return(lUnLock)
 
 static method Exists(cMutexID,cMutexStack) class Mutex
@@ -133,7 +141,7 @@ static method Write(cMutexID,cMutexStack,cBuffer,nBuffer) class Mutex
     oFWThreadSemaphoreLock:SetID(MUTEX_INTERNAL_LOCK+cIDMutex)
     nAttempt=0
     nAttempts:=50
-    while (!(lHasMutex:=oFWThreadSemaphoreLock:Open(.F.)))
+    while (!(lHasMutex:=(GlbNmLock(MUTEX_INTERNAL_LOCK+cIDMutex)).and.(oFWThreadSemaphoreLock:Open(.F.))))
         if (++nAttempt>nAttempts)
             exit
         endif
@@ -158,6 +166,7 @@ static method Write(cMutexID,cMutexStack,cBuffer,nBuffer) class Mutex
     oFWThreadSemaphoreLock:Close()
     oFWThreadSemaphoreLock:Erase()
     FreeObj(@oFWThreadSemaphoreLock)
+    GlbNmUnlock(MUTEX_INTERNAL_LOCK+cIDMutex)
 return(lWrited)
 
 static method ReadStr(cMutexID,cMutexStack,nBytes) class Mutex
@@ -175,7 +184,7 @@ static method ReadStr(cMutexID,cMutexStack,nBytes) class Mutex
     oFWThreadSemaphoreLock:SetID(MUTEX_INTERNAL_LOCK+cIDMutex)
     nAttempt=0
     nAttempts:=50
-    while (!(lHasMutex:=oFWThreadSemaphoreLock:Open(.F.)))
+    while (!(lHasMutex:=((GlbNmLock(MUTEX_INTERNAL_LOCK+cIDMutex)).and.(oFWThreadSemaphoreLock:Open(.F.)))))
         if (++nAttempt>nAttempts)
             exit
         endif
@@ -203,6 +212,7 @@ static method ReadStr(cMutexID,cMutexStack,nBytes) class Mutex
     oFWThreadSemaphoreLock:Close()
     oFWThreadSemaphoreLock:Erase()
     FreeObj(@oFWThreadSemaphoreLock)
+    GlbNmUnLock(MUTEX_INTERNAL_LOCK+cIDMutex)
 return(cReadStr)
 
 static method Clean(cMutexStack,lEraseFileLock) class Mutex
