@@ -26,7 +26,7 @@ class TextView
     static method Show(xMsg as variant,cTitulo as character,cLabel as character,aButtons as array,bValid as codeblock,lQuebraLinha as logical,lSoExibeMsg as logical,lShowRuler as logical) as logical
     static method ShowHtml(cHTML as character,cTitle as character,cHTMLTempFile as character,cBaseURL as character) as logical
     static method ShowHTMLXML(cXML as character,cTitle as character,lPrismJS as logical) as logical
-    static method ShowHTMLJSON(cJSON as character,cTitle as character,lPrismJS as logical) as logical
+    static method ShowHTMLJSON(cJSON as character,cTitle as character,lPrismJS as logical,bFixJSON as codeblock) as logical
     static method ShowHTMLText(cText as character,cTitle as character) as logical
     static method ShowHTMLRESTAPI(cTitle as character,lAjax as logical) as logical
 
@@ -159,11 +159,11 @@ static method Show(xMsg,cTitulo,cLabel,aButtons,bValid,lQuebraLinha,lSoExibeMsg,
 
             oPanel:=tPanel():New(0,0,"",oDlg,nil,nil,nil,nil,nil,nDlgWidth,nDlgHeight)
 
-            //Verifica se Irá mostrar "Regua"
+            //Verifica se Ira mostrar "Regua"
             if (lShowRuler)
                 //Obtem as Linhas conforme LF
                 aRules:=UFTools():StrTokCountArray(cMsg,chr(10))
-                //Verifica qual maior linha para a definição da Regua
+                //Verifica qual maior linha para a definicao da Regua
                 nRulerSize:=0
                 nRules:=Len(aRules)
                 for nRuler:=1 to nRules
@@ -390,33 +390,19 @@ static method ShowHTMLXML(cXML,cTitle,lPrismJS) class TextView
 
 return(lShowHTMLXML)
 
-static method ShowHTMLJSON(cJSON,cTitle,lPrismJS) class TextView
+static method ShowHTMLJSON(cJSON,cTitle,lPrismJS,bFixJSON) class TextView
 
     local cURL as character
     local cHTML as character
-    local cCHR10:=Chr(10) as character
-    local cCHR13:=Chr(13) as character
-    local cSpace2:=Space(2) as character
     local cBaseURL as character
     local lShowHTMLJSON as logical
 
     paramtype 1 var cJSON as character optional default ""
     paramtype 2 var cTitle as character optional default ""
     paramtype 3 var lPrismJS as logical optional default .T.
+    paramtype 4 var bFixJSON as block optional default {|cJSON|FixJSONInShowHTMLJSON(cJSON)}
 
-    while (cCHR10$cJSON)
-        cJSON:=strTran(cJSON,cCHR10,"")
-    end while
-
-    while (cCHR13$cJSON)
-        cJSON:=strTran(cJSON,cCHR13,"")
-    end while
-
-    while (cSpace2$cJSON)
-        cJSON:=strTran(cJSON,cSpace2," ")
-    end while
-
-    cURL:=UFMakeHTMLJSONView(@cJSON,@cTitle,@cHTML,@cBaseURL,@lPrismJS)
+    cURL:=UFMakeHTMLJSONView(@cJSON,@cTitle,@cHTML,@cBaseURL,@lPrismJS,@bFixJSON)
 
     lShowHTMLJSON:=!Empty(cURL)
     if (lShowHTMLJSON)
@@ -648,11 +634,12 @@ static function UFMakeHTMLXMLView(cXML as character,cTitle as character,cHTML as
 
 return(cURL)
 
-static function UFMakeHTMLJSONView(cJSON as character,cTitle as character,cHTML as character,cBaseURL as character,lPrismJS as logical) as character
+static function UFMakeHTMLJSONView(cJSON as character,cTitle as character,cHTML as character,cBaseURL as character,lPrismJS as logical,bFixJSON as codeblock) as character
 
     local cURL as character
 
     local cTmpFile as character
+    local cFixJSON as character
 
     local jMemo:=JSONObject():New() as json
 
@@ -809,6 +796,15 @@ static function UFMakeHTMLJSONView(cJSON as character,cTitle as character,cHTML 
     endif
 
         cHTML:=StrTran(cHTML,"cTitle",TextView():WebAccentuation(cTitle))
+
+        if (valtype(bFixJSON)=="B")
+            cFixJSON:=Eval(bFixJSON,cJSON)
+        endif
+
+        if ((ValType(cFixJSON)=="C").and.(!Empty(cFixJSON)))
+            cJSON:=cFixJSON
+        endif
+
         cHTML:=StrTran(cHTML,"cJSON",cJSON)
 
         cTmpFile:=GetTempPath()
@@ -1220,3 +1216,31 @@ return(lRet)
 
 static method WebAccentuation(cString) class TextView
 return(cTools():WebAccentuation(cString))
+
+static function FixJSONInShowHTMLJSON(cJSON) as character
+
+    local cCHR10:=Chr(10) as character
+    local cCHR13:=Chr(13) as character
+    local cSpace2:=Space(2) as character
+
+    while (cCHR10$cJSON)
+        cJSON:=strTran(cJSON,cCHR10,"")
+    end while
+
+    while (cCHR13$cJSON)
+        cJSON:=strTran(cJSON,cCHR13,"")
+    end while
+
+    while (cSpace2$cJSON)
+        cJSON:=strTran(cJSON,cSpace2," ")
+    end while
+
+    if ("\"$cJSON)
+        cJSON:=StrTran(cJSON,"\","\\")
+    endif
+
+    if ("/"$cJSON)
+        cJSON:=StrTran(cJSON,"/","\/")
+    endif
+
+return(cJSON)
