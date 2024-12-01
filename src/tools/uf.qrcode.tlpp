@@ -1,0 +1,91 @@
+/*
+         __                  _
+ _   _  / _|    _   _  _ __ | |
+| | | || |_    | | | || '__|| |
+| |_| ||  _| _ | |_| || |   | |
+ \__,_||_|  (_) \__,_||_|   |_|
+
+The source code `uf.qrcode.tlpp` is based on a more detailed and feature-rich
+source code, `dna.tech.qrcode.tlpp`, and implements part of the functionalities
+present in the latter.
+
+*/
+
+#include "parmtype.ch"
+#include "tlpp-core.th"
+
+namespace uf
+using namespace uf
+
+class QRCode
+
+    //https://developers.google.com/chart/infographics/docs/qr_codes?hl=pt-br
+    static method GoogleQR(;
+        cString as character,;
+        cWidth as character,;
+        cHeight as character,;
+        nTimeOut as numeric,;
+        aHeadStr as array,;
+        cHeaderGet as character,;
+        nStatus as numeric,;
+        cError as character;
+    ) as character
+
+    //https://goqr.me/api/
+    static method goQR(;
+        cString as character,;
+        cWidth as character,;
+        cHeight as character,;
+        nTimeOut as numeric,;
+        aHeadStr as array,;
+        cHeaderGet as character,;
+        nStatus as numeric,;
+        cError as character;
+    ) as character
+
+    static method UUrlEncode(cString as character) as character
+    static method UUrlDecode(cString as character) as character
+
+end class
+
+static method GoogleQR(cString,cWidth,cHeight,nTimeOut,aHeadStr,cHeaderGet,nStatus,cError) class QRCode
+    local cURL:="https://chart.googleapis.com/chart"
+    local cParameters as character
+    local cQRCodeFile as character
+    paramtype cString as character
+    paramtype cWidth as character optional default "350"
+    paramtype cHeight as character optional default "350"
+    paramtype nTimeOut as numeric optional
+    paramtype aHeadStr as array optional
+    paramtype cHeaderGet as character optional
+    paramtype nStatus as numeric optional
+    paramtype cError as character optional
+    cParameters:="cht=qr&chs="+cWidth+"x"+cHeight+"&choe=UTF-8&chl="+cString
+    cQRCodeFile:=HttpGet(cUrl,cParameters,nTimeOut,aHeadStr,@cHeaderGet)
+    nStatus:=HttpGetStatus(@cError)
+return(cQRCodeFile)
+
+static method goQR(cString,cWidth,cHeight,nTimeOut,aHeadStr,cHeaderGet,nStatus,cError) class QRCode
+    local cURL:="https://api.qrserver.com/v1/create-qr-code"
+    local cParameters as character
+    local cQRCodeFile as character
+    paramtype cString as character
+    paramtype cWidth as character optional default "350"
+    paramtype cHeight as character optional default "350"
+    paramtype nTimeOut as numeric optional
+    paramtype aHeadStr as array optional
+    paramtype cHeaderGet as character optional
+    paramtype nStatus as numeric optional
+    paramtype cError as character optional
+    cParameters:="size="+cWidth+"x"+cHeight+"&data="+cString
+    //Send a GET request of following form to our system to get a QR code graphic as PNG image (=to generate a QR code):
+    //http(s)://api.qrserver.com/v1/create-qr-code/?data=[URL-encoded-text]&size=[pixels]x[pixels]
+    cQRCodeFile:=HttpGet(cUrl,cParameters,nTimeOut,aHeadStr,@cHeaderGet)
+    nStatus:=HttpGetStatus(@cError)
+return(cQRCodeFile)
+
+static method UUrlEncode(cString) class QRCode
+return(URL():Encode(cString))
+
+static method UUrlDecode(cString) class QRCode
+return(URL():Decode(cString))

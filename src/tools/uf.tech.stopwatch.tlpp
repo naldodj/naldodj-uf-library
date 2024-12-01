@@ -1,0 +1,279 @@
+#include "totvs.ch"
+#include "parmtype.ch"
+
+namespace uf
+using namespace uf
+
+/*
+
+         __     _                _              _                                   _          _
+ _   _  / _|   | |_   ___   ___ | |__      ___ | |_   ___   _ __  __      __  __ _ | |_   ___ | |__
+| | | || |_    | __| / _ \ / __|| '_ \    / __|| __| / _ \ | '_ \ \ \ /\ / / / _` || __| / __|| '_ \
+| |_| ||  _| _ | |_ |  __/| (__ | | | | _ \__ \| |_ | (_) || |_) | \ V  V / | (_| || |_ | (__ | | | |
+ \__,_||_|  (_) \__| \___| \___||_| |_|(_)|___/ \__| \___/ | .__/   \_/\_/   \__,_| \__| \___||_| |_|
+
+    The source code `uf.tech.stopwatch.tlpp` is based on a more detailed and feature-rich
+    source code, `dna.tech.stopwatch.tlpp`, and implements part of the functionalities
+    present in the latter.
+
+    oStopWatch:=uf.StopWatch():New()
+    oStopWatch:Start()
+
+*/
+
+class StopWatch
+
+    data nStartTime as numeric
+    data nElapsed as numeric
+    data lRunning as logical
+
+    public method New() Constructor
+
+    public method Start()
+    public method Stop()
+    public method Reset()
+    public method Restart()
+
+    //Retorna o tempo total decorrido em segundos
+    public method Elapsed()
+
+    //Retorna o tempo total decorrido em milissegundos
+    public method ElapsedMilliseconds()
+
+    //Retorna o tempo total decorrido em tiques do temporizador
+    public method ElapsedTicks()
+    //Retorna se o temporizador esta em execucao
+    public method IsRunning()
+
+    //Obtem o numero de tiques atual no mecanismo de temporizador
+    public method GetTimeStamp()
+
+    //Inicializa uma nova instancia de Stopwatch e comeca a medir o tempo decorrido
+    public method StartNew()
+
+    public method nStartTime()
+
+    public method ToJSON()
+
+    //Obtem a Diferenca de Tempo entre o inicio e o fim
+    public method GetElapsedTime(dStartingDate as date,cStartingTime as character,dEndingDate as date,cEndingTime as character)
+
+end class
+
+method New() class StopWatch
+    //Construtor inicializa as variaveis
+    self:nStartTime:=0
+    self:nElapsed:=0
+    self:lRunning:=.F.
+return(self)
+
+method Start() class StopWatch
+    if (!self:lRunning)
+        self:nStartTime:=self:GetTimeStamp()
+        self:lRunning:=.T.
+    endif
+return(self)
+
+method Stop() class StopWatch
+    local nGetTimeStamp as numeric
+    if (self:lRunning)
+        nGetTimeStamp:=self:GetTimeStamp()
+        self:nElapsed+=(nGetTimeStamp-self:nStartTime)
+        self:lRunning:=.F.
+    endif
+return(self)
+
+method Reset() class StopWatch
+    self:nStartTime:=0
+    self:nElapsed:=0
+    self:lRunning:=.F.
+return(self)
+
+method Restart() class StopWatch
+    //Reinicia o temporizador
+    self:Reset()
+    self:Start()
+return(self)
+
+method Elapsed() class StopWatch
+    local nElapsed as numeric
+    local nGetTimeStamp as numeric
+    if (self:lRunning)
+        nGetTimeStamp:=self:GetTimeStamp()
+        // Tempo acumulado mais o tempo atual desde o ultimo start
+        nElapsed:=Round((nGetTimeStamp-self:nStartTime)/1000,0)
+    else
+        // Apenas o tempo acumulado
+        nElapsed:=Round((self:nElapsed)/1000,0)
+    endif
+return(nElapsed)
+
+method ElapsedMilliseconds() class StopWatch
+    local nGetTimeStamp:=self:GetTimeStamp() as numeric
+    local nElapsedMilliseconds as numeric
+    nElapsedMilliseconds:=Round((nGetTimeStamp-self:nStartTime),0)
+return(nElapsedMilliseconds)
+
+method ElapsedTicks() class StopWatch
+    local nGetTimeStamp:=self:GetTimeStamp() as numeric
+    local nElapsedTicks as numeric
+    nElapsedTicks:=(nGetTimeStamp-self:nStartTime)
+return(nElapsedTicks)
+
+method IsRunning() class StopWatch
+return(self:lRunning)
+
+method GetTimeStamp() class StopWatch
+    local nTimeCounter as numeric
+    nTimeCounter:=TimeCounter()
+return(nTimeCounter)
+
+method StartNew() class StopWatch
+    self:Reset()
+    self:Start()
+return(self)
+
+method nStartTime() class StopWatch
+return(self:nStartTime)
+
+method GetElapsedTime(dStartingDate,cStartingTime,dEndingDate,cEndingTime) class StopWatch
+
+    local nTokenCount as numeric
+    local nGetElapsedTime as numeric
+    local nEndingTimeStamp as numeric
+    local nStartingTimeStamp as numeric
+
+    paramtype 1 var dStartingDate as date optional default Date()
+    paramtype 2 var cStartingTime as character optional default Time()+":00"
+    paramtype 3 var dEndingDate as date optional default Date()
+    paramtype 4 var cEndingTime as character optional default Time()+":00"
+
+    //"hh:mm:ss:ml"
+    //   ^  ^  ^
+    //   1  2  3
+    if (":"$cEndingTime)
+        nTokenCount:=cTools():StrTokCount(cStartingTime,":")
+        if (nTokenCount<2)
+            cStartingTime:=if(Empty(cStartingTime),(Time()+":00"),(cStartingTime+":00:00"))
+        elseif (nTokenCount<3)
+            cStartingTime+=":00"
+        endif
+    elseif (!Empty(cStartingTime))
+        cStartingTime+=":00:00:00"
+    else
+        cStartingTime+=Time()+":00"
+    endif
+
+    nStartingTimeStamp:=ConvertToUnixTimeStamp(dStartingDate,cStartingTime)
+
+    if (PCount()<=2)
+
+        // Retorna o TimeStamp da data informada
+        nGetElapsedTime:=(nStartingTimeStamp)
+
+    else
+
+        //"hh:mm:ss:ml"
+        //   ^  ^  ^
+        //   1  2  3
+        if (":"$cEndingTime)
+            nTokenCount:=cTools():StrTokCount(cEndingTime,":")
+            if (nTokenCount<2)
+                cEndingTime:=if(Empty(cEndingTime),(Time()+":00"),(cEndingTime+":00:00"))
+            elseif (nTokenCount<3)
+                cEndingTime+=":00"
+            endif
+        elseif (!Empty(cEndingTime))
+            cEndingTime+=":00:00:00"
+        else
+            cEndingTime+=Time()+":00"
+        endif
+
+        nEndingTimeStamp:=ConvertToUnixTimeStamp(dEndingDate,cEndingTime)
+
+        //Retorna a diferenca em milissegundos
+        nGetElapsedTime:=(nEndingTimeStamp-nStartingTimeStamp)
+
+    endif
+
+return(nGetElapsedTime)
+
+static function ConvertToUnixTimeStamp(dDate,cTime) as numeric
+
+    local aTime as array
+    local aDaysInMonth as array
+
+    local nYear:=Year(dDate) as numeric
+    local nMonth:=Month(dDate) as numeric
+    local nDay:=Day(dDate) as numeric
+
+    local nTime as numeric
+    local nHour as numeric
+    local nMinute as numeric
+    local nSecond as numeric
+    local nMilliseconds as numeric
+
+    local nTimeStamp as numeric
+
+    local nDays as numeric
+    local nX as numeric
+
+    DEFAULT cTime:=(Time()+":00")
+
+    if ((!empty(cTime)).and.(":"$cTime))
+        aTime:=cTools():StrTokCountArray(cTime,":")
+        nTime:=Len(aTime)
+        nHour:=if(nTime>=1,Val(aTime[1]),0)
+        nMinute:=if(nTime>=2,Val(aTime[2]),0)
+        nSecond:=if(nTime>=3,Val(aTime[3]),0)
+        nMilliseconds:=if(nTime>=4,Val(aTime[4]),0)
+        FWFreeArray(@aTime)
+    endif
+
+    // Calcula o numero de dias desde a epoca Unix (1 de janeiro de 1970)
+    nDays:=0
+
+    // Adiciona os dias dos anos completos
+    for nX:=1970 to (nYear-1)
+        nDays+=365
+        if Mod(nX,4)==0.and.(Mod(nX,100) <> 0.or.Mod(nX,400)==0)
+            nDays+=1 // Ano bissexto
+        endif
+    next nX
+
+    aDaysInMonth:={31,28,31,30,31,30,31,31,30,31,30,31}
+    // Adiciona os dias dos meses completos do ano atual
+    for nX:=1 to (nMonth-1)
+        nDays+=aDaysInMonth[nX]
+        if ((nX==2).and.(Mod(nYear,4)==0).and.((Mod(nYear,100)<>0).or.(Mod(nYear,400))==0))
+            nDays+=1 // Ano bissexto
+        endif
+    next nX
+    FWFreeArray(@aDaysInMonth)
+
+    // Adiciona os dias do mes atual
+    nDays+=(nDay-1)
+
+    // Converte para Unix TimeStamp em milissegundos
+    nTimeStamp:=((((nDays*86400)+(nHour*3600)+(nMinute*60)+nSecond)*1000)+nMilliseconds)
+
+return(nTimeStamp)
+
+method ToJSON() class StopWatch
+
+    local cStopWatch as character
+
+    local jStopWatch:=JSONObject():New() as json
+
+    jStopWatch["StartTime"]:=self:nStartTime()
+    jStopWatch["GetTimeStamp"]:=self:GetTimeStamp()
+    jStopWatch["Elapsed"]:=self:Elapsed()
+    jStopWatch["ElapsedMilliseconds"]:=self:ElapsedMilliseconds()
+    jStopWatch["ElapsedTicks"]:=self:ElapsedTicks()
+    jStopWatch["IsRunning"]:=self:IsRunning()
+
+    cStopWatch:=jStopWatch:ToJSON()
+
+    freeObj(@jStopWatch)
+
+return(cStopWatch)
