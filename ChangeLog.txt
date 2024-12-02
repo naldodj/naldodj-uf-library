@@ -3,6 +3,10 @@
    Entries may not always be in chronological/commit order.
    See license at the end of file. */
 
+2024-12-02 13:24 UTC naldodj (UF Pluggy Connectors)
+  + src/tools/uf.stacktools.tlpp
+  * src/tools/uf.ctools.tlpp
+
 2024-12-01 18:54 UTC naldodj (UF Pluggy Connectors)
   * src/tools/uf.text.view.tlpp
 

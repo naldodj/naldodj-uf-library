@@ -1,0 +1,146 @@
+/*----------------------------------------------------------------------
+
+         __          _                 _     _                  _          _    _
+ _   _  / _|    ___ | |_   __ _   ___ | | __| |_   ___    ___  | | ___    | |_ | | _ __   _ __
+| | | || |_    / __|| __| / _` | / __|| |/ /| __| / _ \  / _ \ | |/ __|   | __|| || '_ \ | '_ \
+| |_| ||  _| _ \__ \| |_ | (_| || (__ |   < | |_ | (_) || (_) || |\__ \ _ | |_ | || |_) || |_) |
+ \__,_||_|  (_)|___/ \__| \__,_| \___||_|\_\ \__| \___/  \___/ |_||___/(_) \__||_|| .__/ | .__/
+                                                                                  |_|    |_|
+
+The source code `uf.stacktools.tlpp` is based on a more detailed and feature-rich
+source code, `dna.tech.stacktools.tlpp`, and implements part of the functionalities
+present in the latter.
+
+*/
+
+#include "totvs.ch"
+#include "parmtype.ch"
+#include "tlpp-core.th"
+#include "set_default.ch"
+
+namespace uf
+using namespace uf
+
+class stacktools
+
+    static method StackCount(cStack as character,nMaxCount as numeric) as numeric
+    static method GetCallStack(nStart as numeric) as array
+    static method IsInCallStack(cStack as character) as logical
+    static method IsInStackCall(aStack as array,nReCheck as numeric) as logical
+    static method getProcName(nStack as numeric) as character
+
+end class
+
+static method StackCount(cStack,nMaxCount) class stacktools
+
+    local cPName as character
+
+    local lStack as logical
+    local lCount as logical
+
+    local nStack as numeric
+    local nStackCount as numeric
+
+    paramtype cStack as character
+    paramtype nMaxCount as numeric optional
+
+    cStack:=upper(allTrim(cStack))
+    aStack:=array(0)
+    nStack:=-1
+    lStack:=.T.
+    lCount:=(!empty(nMaxCount))
+    nStackCount:=0
+    while (lStack)
+        cPName:=ProcName(++nStack)
+        lStack:=(!empty(cPName))
+        if (!lStack)
+            exit
+        endif
+        if (cStack==cPName)
+            nStackCount++
+            if (lCount)
+                if (nStackCount>=nMaxCount)
+                    lStack:=.F.
+                    exit
+                endif
+            endif
+        endif
+    end while
+
+    return(nStackCount)
+
+static method IsInCallStack(cStack) class stacktools
+    local lIsInCallStack as logical
+    paramtype cStack as character
+    lIsInCallStack:=IsInCallStack(cStack)
+    return(lIsInCallStack)
+
+static method IsInStackCall(aStack,nReCheck) class stacktools
+    local cStack as character
+    local lIsInStackCall as logical
+    local nStack as numeric
+    local nStacks as numeric
+    paramtype aStack as array
+    paramtype nReCheck as numeric optional default 0
+    nStacks:=len(aStack)
+    for nStack:=1 to nStacks
+        cStack:=aStack[nStack]
+        lIsInStackCall:=stacktools():IsInCallStack(cStack)
+        if (!lIsInStackCall)
+            if (nReCheck==1)
+                loop
+            else
+                exit
+            endif
+        elseif (nReCheck==1)
+            exit
+        endif
+    next nStack
+    return(lIsInStackCall)
+
+static method GetCallStack(nStart) class stacktools
+    local aCallStack as array
+    paramtype nStart as numeric optional default 1
+    aCallStack:=GetCallStack(@nStart)
+    return(aCallStack)
+
+static function GetCallStack(nStart as numeric) as array
+
+    local aCallStack as array
+
+    local cCallStack as character
+
+    local nCallStack as numeric
+
+    aCallStack:=array(0)
+
+    dfv():Default(@nStart,0)
+
+    nCallStack:=nStart
+    while (cCallStack:=ProcName(++nCallStack),(!(empty(cCallStack))))
+        aAdd(aCallStack,cCallStack)
+    end while
+
+    return(aCallStack)
+
+static method getProcName(nStack,lNameSpace) class stacktools
+
+    local aStack as array
+    local cProcName as character
+    local aProcName as array
+
+    paramtype nStack as numeric optional default 2
+    paramtype lNameSpace as logical optional default .F.
+
+    aStack:=stacktools():GetCallStack(nStack)
+    cProcName:=aStack[1]
+
+    if (!lNameSpace)
+        aProcName:=cTools():StrTokCountArray(cProcName,".")
+    else
+        aProcName:={cProcName}
+    endif
+
+    cProcName:=aProcName[Len(aProcName)]
+
+    return(cProcName)

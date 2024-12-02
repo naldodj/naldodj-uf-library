@@ -34,6 +34,7 @@ class cTools
     static method StrTokCountArray(cString as character,cToken as character,bEvalToken as codeblock) as array
     static method __StrTokCountArray(cString as character,cToken as character,bEvalToken as codeblock) as array
 
+    static method Accentuation(cString as character,vAccentuation as variadic) as character
     static method WebAccentuation(cString as character) as character
 
 end class
@@ -104,7 +105,7 @@ static method TextRuler(cText,lStep10) class cTools
 
     local cMult:="" as character
     local cRuller:="1234567890" as character
-	local cTextRuler:="" as character
+    local cTextRuler:="" as character
 
     local nStr as numeric
     local nStep10 as numeric
@@ -293,6 +294,56 @@ static function strToKArray(cString as character,cToken as character,bEvalToken 
 
 return(aStrTokArr)
 
+static function ___ctools____Accentuation(cString as character,vAccentuation as variadic) as character
+
+    local ai18n as array
+
+    local cIdx as character
+    local cChar as character
+    local cAccentuation:=cString as character
+
+    local nAT as numeric
+    local nIdx as numeric
+    local nLen as numeric
+    local nAccentuation as numeric
+
+    begin sequence
+
+        if (vAccentuation==nil)
+            break
+        endif
+
+        getAccentuation()
+        dfv():DefaultEmpty(@__nAccentuation,len(__aAccentuation))
+
+        ai18n:=array(0)
+
+        for nAccentuation:=1 to vAccentuation:vCount
+            cChar:=allTrim(vAccentuation:vArgs[nAccentuation])
+            nAT:=aScan(__aAccentuation,{|x|x[3]==cChar})
+            cChar:=if(nAT>0,__aAccentuation[nAT][1],cChar)
+            aAdd(ai18n,cChar)
+        next nAccentuation
+
+        nIdx:=0
+        nLen:=Len(cAccentuation)
+        for nAT:=1 to nLen
+            cChar:=SubStr(cAccentuation,nAT,1)
+            if (cChar=="#")
+                cIdx:=LTrim(Str(++nIdx))
+                cAccentuation:=stuff(cAccentuation,++nAT,1,cIdx)
+            endif
+        next nAT
+
+        cAccentuation:=i18n(cAccentuation,ai18n)
+
+        FWFreeArray(@ai18n)
+
+    end sequence
+
+    return(cAccentuation)
+
+
 static method WebAccentuation(cString) class cTools
 
     local cStr as character
@@ -305,7 +356,7 @@ static method WebAccentuation(cString) class cTools
     cWebString:=cString
 
     getAccentuation()
-    uf.dfv():DefaultEmpty(@__nAccentuation,len(__aAccentuation))
+    dfv():DefaultEmpty(@__nAccentuation,len(__aAccentuation))
 
     for nAT:=1 to __nAccentuation
         cStr:=__aAccentuation[nAT][1]
