@@ -305,6 +305,7 @@ static function ___ctools____Accentuation(cString as character,vAccentuation as 
     local nAT as numeric
     local nIdx as numeric
     local nLen as numeric
+    local nATPos as numeric
     local nAccentuation as numeric
 
     begin sequence
@@ -328,6 +329,11 @@ static function ___ctools____Accentuation(cString as character,vAccentuation as 
         nIdx:=0
         nLen:=Len(cAccentuation)
         for nAT:=1 to nLen
+            nATPos:=AT("#",SubStr(cAccentuation,nAT))
+            if (nATPos==0)
+                exit
+            endif
+            nAT+=(nATPos-1)
             cChar:=SubStr(cAccentuation,nAT,1)
             if (cChar=="#")
                 cIdx:=LTrim(Str(++nIdx))

@@ -1,0 +1,122 @@
+/*
+
+         __     _                _          _           _                   _    _
+ _   _  / _|   | |_   __ _  ___ | | __ ___ | |_   __ _ | |_  _   _  ___    | |_ | | _ __   _ __
+| | | || |_    | __| / _` |/ __|| |/ // __|| __| / _` || __|| | | |/ __|   | __|| || '_ \ | '_ \
+| |_| ||  _| _ | |_ | (_| |\__ \|   < \__ \| |_ | (_| || |_ | |_| |\__ \ _ | |_ | || |_) || |_) |
+ \__,_||_|  (_) \__| \__,_||___/|_|\_\|___/ \__| \__,_| \__| \__,_||___/(_) \__||_|| .__/ | .__/
+                                                                                   |_|    |_|
+
+
+    The source code `uf.taskstatus.tlpp` is based on a more detailed and feature-rich
+    source code, `dna.tech.taskstatus.tlpp`, and implements part of the functionalities
+    present in the latter.
+
+*/
+
+#include "totvs.ch"
+#include "parmtype.ch"
+#include "tlpp-core.th"
+
+namespace uf
+using namespace uf
+
+function u_TaskStatusNew() as object
+return(TaskStatus():New())
+
+class TaskStatus
+
+    private data cResult as character
+    private data cStatusCode as character
+    private data cErrorMessage as character
+
+    private data lHasError as logical
+
+    public method New() as object
+    public method ClassName() as character
+
+    public method SetResult(cResult as character) as character
+    public method GetResult() as character
+
+    public method SetStatusCode(cStatusCode as character) as character
+    public method GetStatusCode() as character
+
+    public method SerErrorMessage(cErrorMessage as character) as character
+    public method GetErrorMessage() as character
+
+    public method SetErrorStatus(lHasError as logical) as logical
+    public method GetErrorStatus() as logical
+
+end class
+
+method New() class TaskStatus
+    self:cResult:=""
+    self:cStatusCode:=""
+    self:cErrorMessage:=""
+    self:lHasError:=.F.
+return(self)
+
+method ClassName() class TaskStatus
+return("TASKSTATUS")
+
+method SetResult(cResult) class TaskStatus
+    paramtype 1 var cResult as character
+    self:cResult:=cResult
+return(cResult)
+
+method GetResult() class TaskStatus
+return(self:cResult)
+
+method SetStatusCode(cStatusCode) class TaskStatus
+    paramtype 1 var cStatusCode as character
+/*Sugestao de Status
++-----------------------------+------------+---------------------------+----------------------------------------------------------------+
+| **Grupo**                   | **Codigo** | **Status**                | **Descricao**                                                  |
++-----------------------------+------------+---------------------------+----------------------------------------------------------------+
+| **Informativos (1xx)**      | 100        | Continue                  | O cliente deve continuar com a solicitacao.                    |
+|                             | 101        | Switching Protocols       | O servidor aceitou a solicitacao para mudar de protocolo.      |
++-----------------------------+------------+---------------------------+----------------------------------------------------------------+
+| **Sucesso (2xx)**           | 200        | OK                        | A solicitacao foi bem-sucedida.                                |
+|                             | 201        | Created                   | Recurso criado com sucesso (ex.: em um POST).                  |
+|                             | 202        | Accepted                  | Solicitacao aceita para processamento, mas ainda nao concluida.|
+|                             | 204        | No Content                | Solicitacao bem-sucedida, mas sem conteudo retornado.          |
++-----------------------------+------------+---------------------------+----------------------------------------------------------------+
+| **Redirecionamentos (3xx)** | 301        | Moved Permanently         | O recurso foi movido permanentemente para uma nova URL.        |
+|                             | 302        | Found                     | Recurso encontrado temporariamente em outra URL.               |
+|                             | 304        | Not Modified              | Recurso nao foi modificado desde a ultima requisicao (cache).  |
++-----------------------------+------------+---------------------------+----------------------------------------------------------------+
+| **Erros do Cliente (4xx)**  | 400        | Bad Request               | Solicitacao malformada ou invalida.                            |
+|                             | 401        | Unauthorized              | Autenticacao necessaria ou falha na autenticacao.              |
+|                             | 403        | Forbidden                 | O cliente nao tem permissao para acessar o recurso.            |
+|                             | 404        | Not Found                 | O recurso solicitado nao foi encontrado.                       |
+|                             | 405        | Method Not Allowed        | O metodo HTTP usado nao e permitido para o recurso.            |
+|                             | 429        | Too Many Requests         | O cliente fez muitas solicitacoes em um curto periodo.         |
++-----------------------------+------------+---------------------------+----------------------------------------------------------------+
+| **Erros do Servidor (5xx)** | 500        | Internal Server Error     | Erro generico no servidor.                                     |
+|                             | 501        | Not Implemented           | O servidor nao suporta a funcionalidade solicitada.            |
+|                             | 502        | Bad Gateway               | O servidor recebeu uma resposta invalida de outro servidor.    |
+|                             | 503        | Service Unavailable       | O servidor esta indisponivel (sobrecarga ou manutencao).       |
+|                             | 504        | Gateway Timeout           | O servidor nao recebeu resposta a tempo de outro servidor.     |
++-----------------------------+------------+---------------------------+----------------------------------------------------------------+
+*/
+    self:cStatusCode:=cStatusCode
+return(cStatusCode)
+
+method GetStatusCode() class TaskStatus
+return(self:cStatusCode)
+
+method SerErrorMessage(cErrorMessage) class TaskStatus
+    paramtype 1 var cErrorMessage as character
+    self:cErrorMessage:=cErrorMessage
+return(cErrorMessage)
+
+method GetErrorMessage() class TaskStatus
+return(self:cErrorMessage)
+
+method SetErrorStatus(lHasError) class TaskStatus
+    paramtype 1 var lHasError as logical
+    self:lHasError:=lHasError
+return(lHasError)
+
+method GetErrorStatus() class TaskStatus
+return(self:lHasError)
