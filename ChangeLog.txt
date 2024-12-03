@@ -3,6 +3,9 @@
    Entries may not always be in chronological/commit order.
    See license at the end of file. */
 
+2024-12-03 09:21 UTC naldodj (UF Pluggy Connectors New Features)
+  + src/tools/uf.parambox.tools.tlpp
+
 2024-12-02 21:24 UTC naldodj (UF Pluggy Connectors and New Features)
   + src/tools/uf.taskstatus.tlpp
   * src/tools/uf.ctools.tlpp
